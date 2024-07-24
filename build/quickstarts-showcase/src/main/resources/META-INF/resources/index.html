@@ -1,0 +1,243 @@
+<html lang="en">
+<head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>All quickstarts - OptaPlanner Quarkus</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/webjars/font-awesome/css/all.css" />
+</head>
+<body>
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="https://www.optaplanner.org">
+            <img src="optaPlannerLogo200px.png" alt="OptaPlanner logo">
+        </a>
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="https://github.com/kiegroup/optaplanner-quickstarts" target="_blank">Source code</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="https://www.optaplanner.org/learn/documentation.html" target="_blank">Documentation</a>
+            </li>
+        </ul>
+        <button id="exit" type="button" class="btn btn-secondary">
+            <span class="fas fa-power-off"></span> Exit
+        </button>
+    </nav>
+    <div class="sticky-top d-flex justify-content-center align-items-center" aria-live="polite" aria-atomic="true">
+        <div id="notificationPanel" style="position: absolute; top: .5rem;"></div>
+    </div>
+    <div id="content">
+        <p class="m-3">Launch a quickstart and give it a few seconds to start up (especially if built from source).</p>
+        <div class="row row-cols-1 row-cols-md-3">
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-graduation-cap"></i>
+                            School timetabling
+                            <a href="https://quarkus.io/guides/optaplanner" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-school-timetabling-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Assign lessons to timeslots and rooms
+                            to produce a better schedule for teachers and students.
+                        </p>
+                        <button id="school-timetabling-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="school-timetabling-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-broadcast-tower"></i>
+                            Facility location problem
+                            <a href="https://www.optaplanner.org/blog/2020/10/09/FacilityLocationProblemQuickstart.html" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-facility-location-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Pick the best geographical locations for new stores, distribution centers, covid test centers or telco masts.
+                        </p>
+                        <button id="facility-location-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="facility-location-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-tools"></i>
+                            Maintenance scheduling
+                            <a href="https://www.youtube.com/watch?v=gIaHtATz6n8" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-maintenance-scheduling-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Schedule maintenance jobs to crews over time to reduce both premature and overdue maintenance.
+                        </p>
+                        <button id="maintenance-scheduling-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="maintenance-scheduling-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-headset"></i>
+                            Call center
+                            <a href="https://www.youtube.com/watch?v=NPTzXIyQdqU" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-call-center-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Assign incoming calls to agents based on required skills while minimizing customer wait times.
+                        </p>
+                        <button id="call-center-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="call-center-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-truck"></i>
+                            Vehicle routing
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-vehicle-routing-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Find the most efficient routes for a fleet of vehicles.
+                        </p>
+                        <button id="vehicle-routing-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="vehicle-routing-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-syringe"></i>
+                            Vaccination scheduling
+                            <a href="https://www.optaplanner.org/blog/2021/03/04/OptimizingCovid19VaccinationScheduling.html" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-vaccination-scheduling-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Assign people to vaccination injection appointments over time at vaccination centers to end a pandemic sooner.
+                        </p>
+                        <button id="vaccination-scheduling-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="vaccination-scheduling-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-cart-plus"></i>
+                            Order picking
+                            <a href="https://www.optaplanner.org/blog/2021/10/14/OrderPickingQuickstart.html" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-order-picking-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Generate an optimal picking plan for completing a set of orders.
+                        </p>
+                        <button id="order-picking-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="order-picking-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-calendar"></i>
+                            Employee Scheduling
+                            <!-- TODO: Blog Post -->
+                            <a href="https://www.optaplanner.org/learn/useCases/employeeRostering.html" target="_blank" title="About this quickstart" class="float-right">
+                                <span class="fas fa-info-circle"></span>
+                            </a>
+                        </h5>
+                    </div>
+                    <img src="screenshot/quarkus-employee-scheduling-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Schedule shifts to employees, accounting for employee availability and shift skill requirements.
+                        </p>
+                        <button id="employee-scheduling-launch" type="button" class="btn btn-primary w-100">
+                            <span class="fas fa-play"></span> Launch
+                        </button>
+                        <div id="employee-scheduling-ports" class="row row-cols-1 row-cols-md-3 mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card">
+                    <div class="card-header">OptaPlanner examples</div>
+                    <img src="screenshot/optaplanner-examples-screenshot.png" class="card-img-top mt-3" alt="Screenshot"/>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Many examples in desktop technology.
+                        </p>
+                        <a href="https://www.optaplanner.org/download/download.html" target="_blank">
+                            <button type="button" class="btn btn-secondary w-100">
+                                Download
+                            </button>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="exit-alert" class="alert alert-primary d-none" role="alert">
+        This application has been shut down.
+    </div>
+</div>
+
+<script src="/webjars/jquery/jquery.min.js"></script>
+<script src="/webjars/bootstrap/js/bootstrap.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
