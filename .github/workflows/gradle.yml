@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        quickstartDir: ['hello-world', 'use-cases/school-timetabling', 'technology/java-spring-boot']
+        quickstartDir: ['hello-world', 'pulsar-client-contrib', 'use-cases/school-timetabling', 'technology/java-spring-boot']
         java-version: [17] # JDK 19 not yet supported by Gradle.
     steps:
       - uses: actions/checkout@v3

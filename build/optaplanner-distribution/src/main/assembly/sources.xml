@@ -17,6 +17,17 @@
     </fileSet>
     <fileSet>
       <useDefaultExcludes>false</useDefaultExcludes>
+      <directory>../../pulsar-client-contrib</directory>
+      <outputDirectory>quickstarts/sources/pulsar-client-contrib</outputDirectory>
+      <excludes>
+        <exclude>target/**</exclude>
+        <exclude>build/**</exclude>
+        <exclude>.gradle/**</exclude>
+        <exclude>.gitignore</exclude>
+      </excludes>
+    </fileSet>
+    <fileSet>
+      <useDefaultExcludes>false</useDefaultExcludes>
       <directory>../../use-cases/school-timetabling</directory>
       <outputDirectory>quickstarts/sources/use-cases/school-timetabling</outputDirectory>
       <excludes>
