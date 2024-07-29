@@ -15,7 +15,7 @@
   <name>Pulsar Java Contrib</name>
 
   <modules>
-      <module>pulsar-client-contrib</module>
+      <module>pulsar-client-common-contrib</module>
       <module>pulsar-loadbalance-contrib</module>
       <module>pulsar-interceptor-contrib</module>
       <module>pulsar-connector-contrib</module>

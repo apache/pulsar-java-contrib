@@ -11,7 +11,7 @@ Many of these plugins are similar and can be reused. This project aims to collec
 ## 2. Core interface list
 List the core interfaces in Pulsar that can be implemented by contributors.
 
-### 2.1 Pulsar client extension interface
+### 2.1 Pulsar client common extension interface
 - `org.apache.pulsar.client.api.MessageListenerExecutor.java`
 
 ### 2.2 Authentication and authorization related interfaces
@@ -60,7 +60,7 @@ List the core interfaces in Pulsar that can be implemented by contributors.
 ## 3. Interface Implementation Guide
 Provide implementation guide for each type of interfaces.
 
-### 3.1 Client extension interface implementation
+### 3.1 Client common extension interface implementation
 - `org.apache.pulsar.client.api.MessageListenerExecutor.java`
 - **Purpose**: Select different message processing threads according to business scenarios.
 - **Sample code**: org.apache.pulsar.client.api.impl.KeySharedMessageListenerExecutor, org.apache.pulsar.client.api.impl.CommonMessageListenerExecutor, org.apache.pulsar.client.api.impl.PartitionOrderMessageListenerExecutor

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.acme</groupId>
-    <artifactId>pulsar-client-contrib</artifactId>
+    <artifactId>pulsar-client-common-contrib</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
