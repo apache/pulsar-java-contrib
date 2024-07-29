@@ -1,29 +1,21 @@
 # Apache Pulsar Java Contrib
 
-[![Build](https://github.com/StevenLuMT/pulsar-java-contrib/actions/workflows/build.yml/badge.svg)](https://github.com/StevenLuMT/pulsar-java-contrib/actions/workflows/build.yml)
+Pulsar java contrib is to provide a non-core code maintenance repository to collect plugin implementations, personalized features, experimental features, and best practices from users.
 
-pulsar-java-contrib is similar to the positioning of [opentelemetry-java-contrib](https://github.com/open-telemetry/opentelemetry-java-contrib): 
-* One is to prevent the Pulsar main repository from adding too many unnecessary functions, which would make Pulsar too bloated, increasing the user's usage cost and our maintenance cost.
-* The other is to reduce the user's usage cost by implementing a ready-to-use implementation class based on Pulsar's external interface.
+- [Plugin Contribution Guide](conrtibutionGuides.md) lists the core interfaces in Pulsar that can be implemented by contributors, and provides implementation guidelines for each type of interface.
 
-these ways achieve these two goals are the plugin library and the yellow pages. If you need an easier way to implement some plugin library based on Pulsar that cannot be easily satisfied by importing Pulsar directly, then this project is hopefully for you.
+- [Plugin Implementation List](contributedFeatures.md) lists the implemented plugins. Users can select the ones they need for reuse.
 
-## Provided Libraries
+- [Personalization Features](customizationFeatures.md) lists the customized features and experimental features that require modification to the Pulsar source code.
 
+- [Best Practices]([best-pratice-blogs](best-pratice-blogs)) lists the best practices for each function summarized by community contributions.
+  - [consume-best-practice.md](best-pratice-blogs%2Fconsume-best-practice.md)
 
-* [Pulsar Client Contrib](./pulsar-client-contrib/README.md)
-
-## Getting Started
-
-```bash
-
-```
 
 ## Contributing
 
-pulsar-java-contrib is actively in development.  If you have an idea for a similar use case in the metrics, traces, or logging
-domain we would be very interested in supporting it.  Please
-[open an issue](https://github.com/StevenLuMT/pulsar-java-contrib/issues/new/choose) to share your idea or
+pulsar-java-contrib is actively in development.  If you have some common use cases for plugins, please contact us and we'll be happy to support.
+Please[open an issue](https://github.com/StevenLuMT/pulsar-java-contrib/issues/new/choose) to share your idea or
 suggestion.  PRs are always welcome and greatly appreciated, but for larger functional changes a pre-coding introduction
 can be helpful to ensure this is the correct place and that active or conflicting efforts don't exist.
 

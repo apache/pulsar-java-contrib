@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.optaplanner</groupId>
-    <artifactId>optaplanner-quickstarts-parent</artifactId>
+    <artifactId>pulsar-java-contrib</artifactId>
     <version>9.44.0.Final</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
