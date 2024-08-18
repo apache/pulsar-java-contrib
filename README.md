@@ -11,6 +11,9 @@ Pulsar java contrib is to provide a non-core code maintenance repository to coll
 - [Best Practices]([best-pratice-blogs](best-pratice-blogs)) lists the best practices for each function summarized by community contributions.
   - [consume-best-practice.md](best-pratice-blogs%2Fconsume-best-practice.md)
 
+This project follows the terms of **Apache License 2.0**.
+You can format the code by ` mvn spotless:apply` and generate license headers by `mvn license:format`.
+Please note that the code formatted by Spotless may still not meet the formatting requirements. Please run `mvn checkstyle:check` for inspection.
 
 ## Contributing
 

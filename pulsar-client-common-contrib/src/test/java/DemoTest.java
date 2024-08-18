@@ -11,34 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.optaplanner.quickstarts.all.domain;
+import lombok.extern.slf4j.Slf4j;
+import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+@Slf4j
+public class DemoTest {
 
-public class QuickstartMeta {
-
-    private String id;
-
-    private List<Integer> ports = new ArrayList<>();
-
-    public QuickstartMeta() {
-    }
-
-    public QuickstartMeta(String id) {
-        this.id = id;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public List<Integer> getPorts() {
-        return ports;
-    }
-
-    public void setPorts(List<Integer> ports) {
-        this.ports = ports;
-    }
-
+  @Test
+  public void testDemo() {
+    log.info("=== Test started ===");
+  }
 }
