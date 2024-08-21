@@ -25,7 +25,7 @@ import org.apache.pulsar.client.api.MessageListenerExecutor;
 public class CommonMessageListenerExecutor implements MessageListenerExecutor {
   private final ExecutorService executorService;
 
-  public CommonMessageListenerExecutor(int numThreads, String subscriptionName) {
+  public CommonMessageListenerExecutor(int numThreads, final String subscriptionName) {
     this.executorService =
         new ThreadPoolExecutor(
             numThreads,
