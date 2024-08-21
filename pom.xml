@@ -22,6 +22,7 @@
         <artifactId>apache</artifactId>
         <version>29</version>
     </parent>
+    <version>1.0.0-SNAPSHOT</version>
 
     <inceptionYear>2024</inceptionYear>
 
@@ -94,12 +95,13 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <pulsar.version>3.0.5</pulsar.version>
-        <maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
+        <pulsar.version>3.0.6</pulsar.version>
+        <maven-checkstyle-plugin.version>3.4.0</maven-checkstyle-plugin.version>
         <puppycrawl.checkstyle.version>8.45.1</puppycrawl.checkstyle.version>
-        <spotless-maven-plugin.version>2.18.0</spotless-maven-plugin.version>
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
+        <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-wrapper-plugin.version>3.3.2</maven-wrapper-plugin.version>
+        <license-maven-plugin.version>4.5</license-maven-plugin.version>
     </properties>
     <build>
         <plugins>
@@ -113,8 +115,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>17</source>
-                    <target>17</target>
+                    <maven.compiler.release>17</maven.compiler.release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -179,7 +180,7 @@
                 <!-- Check that source files have appropriate license headers -->
                 <groupId>com.mycila</groupId>
                 <artifactId>license-maven-plugin</artifactId>
-                <version>4.1</version>
+                <version>${license-maven-plugin.version}</version>
                 <configuration>
                     <header>etc/APACHE-2.txt</header>
                     <excludes>
@@ -204,7 +205,7 @@
                     <dependency>
                         <groupId>com.mycila</groupId>
                         <artifactId>license-maven-plugin-git</artifactId>
-                        <version>4.1</version>
+                        <version>${license-maven-plugin.version}</version>
                     </dependency>
                 </dependencies>
                 <executions>
