@@ -9,17 +9,17 @@ Pulsar java contrib is to provide a non-core code maintenance repository to coll
 - [Personalization Features](customizationFeatures.md) lists the customized features and experimental features that require modification to the Pulsar source code.
 
 - [Best Practices]([best-practice-blogs](best-practice-blogs)) lists the best practices for each function summarized by community contributions.
-  - [consume-best-practice.md](best-pratice-blogs%2Fconsume-best-practice.md)
+  - [consume-best-practice.md](best-practice-blogs%2Fconsume-best-practice.md)
 
 This project follows the terms of **Apache License 2.0**.
-You can format the code by ` mvn spotless:apply` and generate license headers by `mvn license:format`.
+You can format the code by `mvn spotless:apply` and generate license headers by `mvn license:format`.
 Please note that the code formatted by Spotless may still not meet the formatting requirements. Please run `mvn checkstyle:check` for inspection.
 
 ## Contributing
 
 pulsar-java-contrib is actively in development.  If you have some common use cases for plugins, please contact us and we'll be happy to support.
-Please[open an issue](https://github.com/apache/pulsar-java-contrib/issues/new) to share your idea or
+Please [open an issue](https://github.com/apache/pulsar-java-contrib/issues/new) to share your idea or
 suggestion.  PRs are always welcome and greatly appreciated, but for larger functional changes a pre-coding introduction
 can be helpful to ensure this is the correct place and that active or conflicting efforts don't exist.
 
-Learn more about roles in the [community repository](https://github.com/StevenLuMT/pulsar-java-contrib).
+Learn more about roles in the [community repository](https://github.com/pulsar/pulsar-java-contrib).

@@ -16,7 +16,7 @@ The messages are consumed in order for a single partition in Exclusive and Failo
 Key-shared mode. The main difference between Exclusive and Failover is that in Exclusive mode, the consumer is exclusive
 to the entire topic, while in Failover mode, the consumer is exclusive to only one partition. Failover mode allows backup
 consumer connections that are not consumed. The main difference between Shared and Key-shared is whether their dispatch
-strategy is implemented via a key. For more information about subscription type, refer to the [Pulsar website](https://pulsar.apache.org/docs/3.2.x/concepts-messaging/).
+strategy is implemented via a key. For more information about subscription type, refer to the [Pulsar website](https://pulsar.apache.org/docs/next/concepts-messaging/).
 ![img.png](static/img/blog-consume-best-practice/subscription-types.png)
 
 ### Acknowledgment
