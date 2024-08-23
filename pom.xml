@@ -14,8 +14,7 @@
     limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache</groupId>
@@ -130,7 +129,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.7</version>
+                            <version>1.10.0</version>
                             <style>GOOGLE</style>
                         </googleJavaFormat>
                     </java>
@@ -144,21 +143,21 @@
                             <expandEmptyElements>true</expandEmptyElements>
                             <spaceBeforeCloseEmptyElement>false</spaceBeforeCloseEmptyElement>
                             <keepBlankLines>true</keepBlankLines>
-                            <nrOfIndentSpace>2</nrOfIndentSpace>
+                            <nrOfIndentSpace>4</nrOfIndentSpace>
                             <indentBlankLines>false</indentBlankLines>
                             <indentSchemaLocation>false</indentSchemaLocation>
-                            <indentAttribute>true</indentAttribute>
                             <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
-                            <sortOrderFile>true</sortOrderFile>
-                            <sortDependencies>true</sortDependencies>
+                            <sortOrderFile>./sort_order.xml</sortOrderFile>
+                            <sortDependencies>groupId,artifactId</sortDependencies>
                             <sortDependencyManagement>true</sortDependencyManagement>
-                            <sortDependencyExclusions>true</sortDependencyExclusions>
-                            <sortPlugins>true</sortPlugins>
+                            <sortDependencyExclusions>groupId,artifactId</sortDependencyExclusions>
+                            <sortPlugins>groupId,artifactId</sortPlugins>
                             <sortProperties>false</sortProperties>
                             <sortModules>false</sortModules>
                             <sortExecutions>false</sortExecutions>
                         </sortPom>
-                    </pom>                </configuration>
+                    </pom>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -184,7 +183,8 @@
                     <suppressionsLocation>./src/main/resources/suppressions.xml</suppressionsLocation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <encoding>UTF-8</encoding>
-                    <excludes>**/*.proto</excludes> <!-- Example exclusion -->
+                    <excludes>**/*.proto</excludes>
+                    <!-- Example exclusion -->
                 </configuration>
                 <executions>
                     <execution>
