@@ -2,13 +2,13 @@
 
 Pulsar java contrib is to provide a non-core code maintenance repository to collect plugin implementations, personalized features, experimental features, and best practices from users.
 
-- [Plugin Contribution Guide](contributionGuides) lists the core interfaces in Pulsar that can be implemented by contributors, and provides implementation guidelines for each type of interface.
+- [Plugin Contribution Guide](contributionGuides.md) lists the core interfaces in Pulsar that can be implemented by contributors, and provides implementation guidelines for each type of interface.
 
 - [Plugin Implementation List](contributedFeatures.md) lists the implemented plugins. Users can select the ones they need for reuse.
 
 - [Personalization Features](customizationFeatures.md) lists the customized features and experimental features that require modification to the Pulsar source code.
 
-- [Best Practices]([best-practice-blogs](best-practice-blogs)) lists the best practices for each function summarized by community contributions.
+- [Best Practices](best-practice-blogs) lists the best practices for each function summarized by community contributions.
   - [consume-best-practice.md](best-practice-blogs%2Fconsume-best-practice.md)
 
 This project follows the terms of **Apache License 2.0**.
