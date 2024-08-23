@@ -144,7 +144,6 @@
                             <expandEmptyElements>true</expandEmptyElements>
                             <spaceBeforeCloseEmptyElement>false</spaceBeforeCloseEmptyElement>
                             <keepBlankLines>true</keepBlankLines>
-                            <endWithNewline>true</endWithNewline>
                             <nrOfIndentSpace>2</nrOfIndentSpace>
                             <indentBlankLines>false</indentBlankLines>
                             <indentSchemaLocation>false</indentSchemaLocation>
