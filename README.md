@@ -21,5 +21,3 @@ pulsar-java-contrib is actively in development.  If you have some common use cas
 Please [open an issue](https://github.com/apache/pulsar-java-contrib/issues/new) to share your idea or
 suggestion.  PRs are always welcome and greatly appreciated, but for larger functional changes a pre-coding introduction
 can be helpful to ensure this is the correct place and that active or conflicting efforts don't exist.
-
-Learn more about roles in the [community repository](https://github.com/pulsar/pulsar-java-contrib).
