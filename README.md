@@ -8,7 +8,7 @@ Pulsar java contrib is to provide a non-core code maintenance repository to coll
 
 - [Personalization Features](customizationFeatures.md) lists the customized features and experimental features that require modification to the Pulsar source code.
 
-- [Best Practices]([best-practice-blogs](best-practice-blogs)) lists the best practices for each function summarized by community contributions.
+- [Best Practices](best-practice-blogs) lists the best practices for each function summarized by community contributions.
   - [consume-best-practice.md](best-practice-blogs%2Fconsume-best-practice.md)
 
 This project follows the terms of **Apache License 2.0**.
