@@ -59,26 +59,6 @@
         <module>pulsar-auth-contrib</module>
     </modules>
 
-    <profiles>
-        <profile>
-            <id>default</id>
-            <activation>
-                <property>
-                    <name>!productized</name>
-                </property>
-            </activation>
-        </profile>
-
-        <profile>
-            <id>fullProfile</id>
-            <activation>
-                <property>
-                    <name>full</name>
-                </property>
-            </activation>
-        </profile>
-    </profiles>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
