@@ -14,8 +14,7 @@
     limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache</groupId>
@@ -45,6 +44,7 @@
         <license-maven-plugin.version>4.5</license-maven-plugin.version>
         <org.testing.version>7.10.2</org.testing.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <google-java-format.version>1.10.0</google-java-format.version>
     </properties>
 
     <modules>
@@ -130,10 +130,34 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.7</version>
+                            <version>${google-java-format.version}</version>
                             <style>GOOGLE</style>
                         </googleJavaFormat>
                     </java>
+                    <pom>
+                        <includes>
+                            <include>pom.xml</include>
+                        </includes>
+                        <sortPom>
+                            <encoding>UTF-8</encoding>
+                            <lineSeparator>${line.separator}</lineSeparator>
+                            <expandEmptyElements>true</expandEmptyElements>
+                            <spaceBeforeCloseEmptyElement>false</spaceBeforeCloseEmptyElement>
+                            <keepBlankLines>true</keepBlankLines>
+                            <nrOfIndentSpace>4</nrOfIndentSpace>
+                            <indentBlankLines>false</indentBlankLines>
+                            <indentSchemaLocation>false</indentSchemaLocation>
+                            <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
+                            <sortOrderFile>./sort_order.xml</sortOrderFile>
+                            <sortDependencies>groupId,artifactId</sortDependencies>
+                            <sortDependencyManagement>true</sortDependencyManagement>
+                            <sortDependencyExclusions>groupId,artifactId</sortDependencyExclusions>
+                            <sortPlugins>groupId,artifactId</sortPlugins>
+                            <sortProperties>false</sortProperties>
+                            <sortModules>false</sortModules>
+                            <sortExecutions>false</sortExecutions>
+                        </sortPom>
+                    </pom>
                 </configuration>
                 <executions>
                     <execution>
@@ -160,7 +184,8 @@
                     <suppressionsLocation>./src/main/resources/suppressions.xml</suppressionsLocation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <encoding>UTF-8</encoding>
-                    <excludes>**/*.proto</excludes> <!-- Example exclusion -->
+                    <excludes>**/*.proto</excludes>
+                    <!-- Example exclusion -->
                 </configuration>
                 <executions>
                     <execution>
