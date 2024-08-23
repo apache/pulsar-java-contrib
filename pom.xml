@@ -44,6 +44,7 @@
         <license-maven-plugin.version>4.5</license-maven-plugin.version>
         <org.testing.version>7.10.2</org.testing.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <google-java-format.version>1.10.0</google-java-format.version>
     </properties>
 
     <modules>
@@ -129,7 +130,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.10.0</version>
+                            <version>${google-java-format.version}</version>
                             <style>GOOGLE</style>
                         </googleJavaFormat>
                     </java>
