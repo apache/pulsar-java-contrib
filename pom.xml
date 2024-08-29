@@ -57,6 +57,7 @@
         <module>pulsar-transaction-contrib</module>
         <module>pulsar-metrics-contrib</module>
         <module>pulsar-auth-contrib</module>
+        <module>pulsar-rpc-contrib</module>
     </modules>
 
     <dependencyManagement>
