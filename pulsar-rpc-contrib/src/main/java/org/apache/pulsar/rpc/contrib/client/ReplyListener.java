@@ -13,24 +13,22 @@
  */
 package org.apache.pulsar.rpc.contrib.client;
 
+import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageListener;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
-
 @Slf4j
 @RequiredArgsConstructor
-public class ReplyListener<REPLY> implements MessageListener<REPLY> {
-    private final ConcurrentHashMap<String, CompletableFuture<REPLY>> pendingRequestsMap;
+public class ReplyListener<V> implements MessageListener<V> {
+    private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
 
     @Override
-    public void received(Consumer<REPLY> consumer, Message<REPLY> msg) {
+    public void received(Consumer<V> consumer, Message<V> msg) {
         String correlationId = msg.getKey();
         try {
             if (!pendingRequestsMap.containsKey(correlationId)) {
@@ -38,7 +36,7 @@ public class ReplyListener<REPLY> implements MessageListener<REPLY> {
                                 + " This may indicate the message has already been processed or timed out.",
                         consumer.getTopic(), consumer.getConsumerName(), correlationId);
             } else {
-                CompletableFuture<REPLY> future = pendingRequestsMap.get(correlationId);
+                CompletableFuture<V> future = pendingRequestsMap.get(correlationId);
                 String errorMessage = msg.getProperty(ERROR_MESSAGE);
                 if (errorMessage != null) {
                     future.completeExceptionally(new Exception(errorMessage));
@@ -54,5 +52,4 @@ public class ReplyListener<REPLY> implements MessageListener<REPLY> {
             });
         }
     }
-
 }

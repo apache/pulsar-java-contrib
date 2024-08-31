@@ -13,22 +13,20 @@
  */
 package org.apache.pulsar.rpc.contrib.client;
 
+import static org.apache.pulsar.rpc.contrib.common.Constants.REPLY_TOPIC;
+import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_TIMEOUT_MILLIS;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 
-import java.util.concurrent.CompletableFuture;
-
-import static org.apache.pulsar.rpc.contrib.common.Constants.REPLY_TOPIC;
-import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_TIMEOUT_MILLIS;
-
 @Slf4j
 @RequiredArgsConstructor
-public class RequestSender<REQUEST> {
+public class RequestSender<T> {
     private final String replyTopic;
 
-    CompletableFuture<MessageId> sendRequest(TypedMessageBuilder<REQUEST> message, long millis) {
+    CompletableFuture<MessageId> sendRequest(TypedMessageBuilder<T> message, long millis) {
         return message.property(REPLY_TOPIC, replyTopic)
                 .property(REQUEST_TIMEOUT_MILLIS, String.valueOf(millis))
                 .sendAsync();

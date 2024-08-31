@@ -13,6 +13,12 @@
  */
 package org.apache.pulsar.rpc.contrib.client;
 
+import static lombok.AccessLevel.PACKAGE;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -24,40 +30,35 @@ import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
-import static lombok.AccessLevel.PACKAGE;
 
 @RequiredArgsConstructor(access = PACKAGE)
-public class PulsarRpcClient<REQUEST, REPLY> implements AutoCloseable {
-    private final ConcurrentHashMap<String, CompletableFuture<REPLY>> pendingRequestsMap;
+public class PulsarRpcClient<T, V> implements AutoCloseable {
+    private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
     private final Duration replyTimeout;
-    private final RequestSender<REQUEST> sender;
+    private final RequestSender<T> sender;
     @Getter
-    private final Producer<REQUEST> requestProducer;
-    private final Consumer<REPLY> replyConsumer;
+    private final Producer<T> requestProducer;
+    private final Consumer<V> replyConsumer;
 
-    public static <REQUEST, REPLY> PulsarRpcClient<REQUEST, REPLY> create(
-            PulsarClient client, PulsarRpcClientBuilder<REQUEST, REPLY> builder) throws IOException {
-        ConcurrentHashMap<String, CompletableFuture<REPLY>> pendingRequestsMap = new ConcurrentHashMap<>();
-        MessageDispatcherFactory<REQUEST, REPLY> dispatcherFactory = new MessageDispatcherFactory<>(
+    public static <T, V> PulsarRpcClient<T, V> create(
+            @NonNull PulsarClient client, @NonNull PulsarRpcClientBuilder<T, V> builder) throws IOException {
+        ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap = new ConcurrentHashMap<>();
+        MessageDispatcherFactory<T, V> dispatcherFactory = new MessageDispatcherFactory<>(
                 client,
                 builder.getRequestSchema(),
                 builder.getReplySchema(),
                 builder.getReplySubscription());
 
-        Producer<REQUEST> producer = dispatcherFactory.requestProducer(builder.getRequestProducer());
-        RequestSender<REQUEST> sender = new RequestSender<>(builder.getReplyTopic());
+        Producer<T> producer = dispatcherFactory.requestProducer(builder.getRequestProducer());
+        RequestSender<T> sender = new RequestSender<>(null == builder.getReplyTopic()
+                ? builder.getReplyTopicsPattern().pattern() : builder.getReplyTopic());
 
-        ReplyListener<REPLY> replyListener = new ReplyListener<>(pendingRequestsMap);
-        Consumer<REPLY> consumer = dispatcherFactory.replyConsumer(
+        ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap);
+        Consumer<V> consumer = dispatcherFactory.replyConsumer(
                 builder.getReplyTopic(),
                 replyListener,
-                builder.getReplyTopicsPattern());
+                builder.getReplyTopicsPattern(),
+                builder.getPatternAutoDiscoveryInterval());
 
         return new PulsarRpcClient<>(
                 pendingRequestsMap,
@@ -68,8 +69,8 @@ public class PulsarRpcClient<REQUEST, REPLY> implements AutoCloseable {
         );
     }
 
-    public static <REQUEST, REPLY> PulsarRpcClientBuilder<REQUEST, REPLY> builder(
-            @NonNull Schema<REQUEST> requestSchema, @NonNull Schema<REPLY> replySchema) {
+    public static <T, V> PulsarRpcClientBuilder<T, V> builder(
+            @NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
         return new PulsarRpcClientBuilder<>(requestSchema, replySchema);
     }
 
@@ -82,17 +83,13 @@ public class PulsarRpcClient<REQUEST, REPLY> implements AutoCloseable {
         }
     }
 
-    public REPLY request(String correlationId, TypedMessageBuilder<REQUEST> message) throws PulsarClientException {
-        try {
-            return requestAsync(correlationId, message).get();
-        } catch (Exception e) {
-            throw PulsarClientException.unwrap(e);
-        }
+    public V request(String correlationId, TypedMessageBuilder<T> message) throws Exception {
+        return requestAsync(correlationId, message).get();
     }
 
-    public CompletableFuture<REPLY> requestAsync(String correlationId, TypedMessageBuilder<REQUEST> message) {
+    public CompletableFuture<V> requestAsync(String correlationId, TypedMessageBuilder<T> message) {
+        CompletableFuture<V> replyFuture = new CompletableFuture<>();
         long replyTimeoutMillis = replyTimeout.toMillis();
-        CompletableFuture<REPLY> replyFuture = new CompletableFuture<>();
         replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
                 .exceptionally(e -> {
                     replyFuture.completeExceptionally(e);

@@ -13,57 +13,63 @@
  */
 package org.apache.pulsar.rpc.contrib.client;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.NonNull;
 import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.regex.Pattern;
-
 @Getter
-public class PulsarRpcClientBuilder<REQUEST, REPLY> {
-    private final Schema<REQUEST> requestSchema;
-    private final Schema<REPLY> replySchema;
-    private ProducerBuilder<REQUEST> requestProducer;
+public class PulsarRpcClientBuilder<T, V> {
+    private final Schema<T> requestSchema;
+    private final Schema<V> replySchema;
+    private ProducerBuilder<T> requestProducer;
     private String replyTopic;
     private String replySubscription;
     private Duration replyTimeout = Duration.ofSeconds(3);
     private Pattern replyTopicsPattern;
+    private Duration patternAutoDiscoveryInterval;
 
-    public PulsarRpcClientBuilder(@NonNull Schema<REQUEST> requestSchema, @NonNull Schema<REPLY> replySchema) {
+    public PulsarRpcClientBuilder(@NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
         this.requestSchema = requestSchema;
         this.replySchema = replySchema;
     }
 
-    public PulsarRpcClientBuilder<REQUEST, REPLY> requestProducer(@NonNull ProducerBuilder<REQUEST> requestProducer) {
+    public PulsarRpcClientBuilder<T, V> requestProducer(@NonNull ProducerBuilder<T> requestProducer) {
         this.requestProducer = requestProducer;
         return this;
     }
 
-    public PulsarRpcClientBuilder<REQUEST, REPLY> replyTopic(@NonNull String replyTopic) {
+    public PulsarRpcClientBuilder<T, V> replyTopic(@NonNull String replyTopic) {
         this.replyTopic = replyTopic;
         return this;
     }
 
-    public PulsarRpcClientBuilder<REQUEST, REPLY> replyTopic(@NonNull Pattern replyTopicsPattern) {
+    public PulsarRpcClientBuilder<T, V> replyTopicsPattern(@NonNull Pattern replyTopicsPattern) {
         this.replyTopicsPattern = replyTopicsPattern;
         return this;
     }
 
-    public PulsarRpcClientBuilder<REQUEST, REPLY> replySubscription(@NonNull String replySubscription) {
+    public PulsarRpcClientBuilder<T, V> replySubscription(@NonNull String replySubscription) {
         this.replySubscription = replySubscription;
         return this;
     }
 
-    public PulsarRpcClientBuilder<REQUEST, REPLY> replyTimeout(@NonNull Duration replyTimeout) {
+    public PulsarRpcClientBuilder<T, V> replyTimeout(@NonNull Duration replyTimeout) {
         this.replyTimeout = replyTimeout;
         return this;
     }
 
-    public PulsarRpcClient<REQUEST, REPLY> build(PulsarClient pulsarClient) throws IOException {
+    public PulsarRpcClientBuilder<T, V> patternAutoDiscoveryInterval(
+            @NonNull Duration patternAutoDiscoveryInterval) {
+        this.patternAutoDiscoveryInterval = patternAutoDiscoveryInterval;
+        return this;
+    }
+
+    public PulsarRpcClient<T, V> build(PulsarClient pulsarClient) throws IOException {
         return PulsarRpcClient.create(pulsarClient, this);
     }
 }
