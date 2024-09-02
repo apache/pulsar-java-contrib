@@ -97,14 +97,14 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
                     if (callback != null) {
                         callback.onTimeout(correlationId, e);
                     }
-                    removeFailedRequest(correlationId);
+                    removeRequest(correlationId);
                     return null;
                 });
         pendingRequestsMap.put(correlationId, replyFuture);
         sender.sendRequest(message, replyTimeoutMillis)
                 .thenAccept(requestMessageId -> {
                     if (replyFuture.isCancelled() || replyFuture.isCompletedExceptionally()) {
-                        removeFailedRequest(correlationId);
+                        removeRequest(correlationId);
                     } else {
                         if (callback != null) {
                             callback.onSendRequestSuccess(correlationId, requestMessageId);
@@ -116,13 +116,13 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
                     } else {
                         replyFuture.completeExceptionally(ex);
                     }
-                    removeFailedRequest(correlationId);
+                    removeRequest(correlationId);
                     return null;
                 });
         return replyFuture;
     }
 
-    public void removeFailedRequest(String correlationId) {
+    public void removeRequest(String correlationId) {
         pendingRequestsMap.remove(correlationId);
     }
 
