@@ -14,6 +14,7 @@
 package org.apache.pulsar.rpc.contrib.server;
 
 import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
+import static org.apache.pulsar.rpc.contrib.common.Constants.SERVER_SUB;
 import java.util.function.BiConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,24 +31,27 @@ public class ReplySender<T, V> {
     private final BiConsumer<String, T> rollBackFunction;
 
     @SneakyThrows
-    public void sendReply(String topic, String correlationId, V reply, T value) {
-        onSend(topic, correlationId, b -> b.value(reply), value);
+    public void sendReply(String topic, String correlationId, V reply, T value, String sub) {
+        onSend(topic, correlationId, msg -> msg.value(reply), value, sub);
     }
 
     @SneakyThrows
-    public void sendErrorReply(String topic, String correlationId, String errorMessage, T value) {
-        onSend(topic, correlationId, b -> b.property(ERROR_MESSAGE, errorMessage).value(null), value);
+    public void sendErrorReply(String topic, String correlationId, String errorMessage, T value, String sub) {
+        onSend(topic, correlationId, msg -> msg.property(ERROR_MESSAGE, errorMessage).value(null), value, sub);
     }
 
     @SneakyThrows
     public void onSend(String topic,
                        String correlationId,
                        java.util.function.Consumer<TypedMessageBuilder<V>> consumer,
-                       T value) {
+                       T value,
+                       String sub) {
         log.debug("Sending {}", correlationId);
         Producer<V> producer = pool.borrowObject(topic);
         try {
-            TypedMessageBuilder<V> builder = producer.newMessage().key(correlationId);
+            TypedMessageBuilder<V> builder = producer.newMessage()
+                    .key(correlationId)
+                    .property(SERVER_SUB, sub);
             consumer.accept(builder);
             builder.sendAsync()
                     .exceptionally(e -> {

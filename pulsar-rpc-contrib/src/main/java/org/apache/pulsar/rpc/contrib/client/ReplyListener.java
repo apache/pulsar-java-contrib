@@ -26,6 +26,7 @@ import org.apache.pulsar.client.api.MessageListener;
 @RequiredArgsConstructor
 public class ReplyListener<V> implements MessageListener<V> {
     private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
+    private final RequestCallBack<V> callBack;
 
     @Override
     public void received(Consumer<V> consumer, Message<V> msg) {
@@ -39,9 +40,17 @@ public class ReplyListener<V> implements MessageListener<V> {
                 CompletableFuture<V> future = pendingRequestsMap.get(correlationId);
                 String errorMessage = msg.getProperty(ERROR_MESSAGE);
                 if (errorMessage != null) {
-                    future.completeExceptionally(new Exception(errorMessage));
+                    if (callBack != null) {
+                        callBack.onReplyError(correlationId, consumer.getSubscription(), errorMessage, future);
+                    } else {
+                        future.completeExceptionally(new Exception(errorMessage));
+                    }
                 } else {
-                    future.complete(msg.getValue());
+                    if (callBack != null) {
+                        callBack.onReplySuccess(correlationId, consumer.getSubscription(), msg.getValue(), future);
+                    } else {
+                        future.complete(msg.getValue());
+                    }
                 }
             }
         } finally {

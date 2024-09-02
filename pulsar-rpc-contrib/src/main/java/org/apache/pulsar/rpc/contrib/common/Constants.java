@@ -20,4 +20,5 @@ public class Constants {
     public static final String REQUEST_TIMEOUT_MILLIS = "requestTimeoutInMillis";
     public static final String REPLY_TOPIC = "replyTopic";
     public static final String ERROR_MESSAGE = "errorMessage";
+    public static final String SERVER_SUB = "serverSub";
 }

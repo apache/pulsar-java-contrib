@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
@@ -33,6 +34,7 @@ import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 import org.apache.pulsar.rpc.contrib.client.PulsarRpcClient;
 import org.apache.pulsar.rpc.contrib.client.PulsarRpcClientBuilder;
+import org.apache.pulsar.rpc.contrib.client.RequestCallBack;
 import org.apache.pulsar.rpc.contrib.server.PulsarRpcServer;
 import org.apache.pulsar.rpc.contrib.server.PulsarRpcServerBuilder;
 import org.awaitility.Awaitility;
@@ -44,11 +46,12 @@ import org.testng.annotations.Test;
 @Slf4j
 public class SimpleRpcCallTest {
     private final Supplier<String> correlationIdSupplier = () -> randomUUID().toString();
-    private final String topicBase = "persistent://public/default/testRpcCall";
+    private final String topicPrefix = "persistent://public/default/";
+    private final String topicBase = "testRpcCall";
     private final String requestTopic = topicBase + "-request";
     private final String replyTopic = topicBase + "-reply";
-    Pattern requestTopicPattern = Pattern.compile(requestTopic + ".*");
-    Pattern replyTopicPattern = Pattern.compile(replyTopic + ".*");
+    Pattern requestTopicPattern = Pattern.compile(topicPrefix + requestTopic + ".*");
+    Pattern replyTopicPattern = Pattern.compile(topicPrefix + replyTopic + ".*");
     private final String requestSubBase = requestTopic + "-sub";
     private final String replySubBase = replyTopic + "-sub";
     private final Duration replyTimeout = Duration.ofSeconds(3);
@@ -91,7 +94,7 @@ public class SimpleRpcCallTest {
                 .producerName("requestProducer");
 
         // 1.Create PulsarRpcClient
-        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null);
+        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null, null);
 
         // 2.Create PulsarRpcServer
         final int defaultEpoch = 1;
@@ -140,6 +143,102 @@ public class SimpleRpcCallTest {
     }
 
     @Test
+    public void testRpcCallWithCallBack() throws Exception {
+        ProducerBuilder<TestRequest> requestProducerBuilder = pulsarClient.newProducer(requestSchema)
+                .topic(requestTopic)
+                .enableBatching(false)
+                .producerName("requestProducer");
+
+        RequestCallBack<TestReply> callBack = new RequestCallBack<>() {
+            @Override
+            public void onSendRequestSuccess(String correlationId, MessageId messageId) {
+                log.info("<onSendRequestSuccess> CorrelationId[{}] Send request message success. MessageId: {}",
+                        correlationId, messageId);
+            }
+
+            @Override
+            public void onSendRequestError(String correlationId, Throwable t,
+                                           CompletableFuture<TestReply> replyFuture) {
+                log.warn("<onSendRequestError> CorrelationId[{}] Send request message failed. {}",
+                        correlationId, t.getMessage());
+                replyFuture.completeExceptionally(t);
+            }
+
+            @Override
+            public void onReplySuccess(String correlationId, String subscription,
+                                       TestReply value, CompletableFuture<TestReply> replyFuture) {
+                log.info("<onReplySuccess> CorrelationId[{}] Subscription[{}] Receive reply message success. Value: {}",
+                        correlationId, subscription, value);
+                replyFuture.complete(value);
+            }
+
+            @Override
+            public void onReplyError(String correlationId, String subscription,
+                                     String errorMessage, CompletableFuture<TestReply> replyFuture) {
+                log.warn("<onReplyError> CorrelationId[{}] Subscription[{}] Receive reply message failed. {}",
+                        correlationId, subscription, errorMessage);
+                replyFuture.completeExceptionally(new Exception(errorMessage));
+            }
+
+            @Override
+            public void onTimeout(String correlationId, Throwable t) {
+                log.warn("<onTimeout> CorrelationId[{}] Receive reply message timed out. {}",
+                        correlationId, t.getMessage());
+            }
+        };
+
+        // 1.Create PulsarRpcClient
+        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null, callBack);
+
+        // 2.Create PulsarRpcServer
+        final int defaultEpoch = 1;
+        AtomicInteger epoch = new AtomicInteger(defaultEpoch);
+        // What do we do when we receive the request message
+        requestFunction = request -> {
+            epoch.getAndIncrement();
+            return CompletableFuture.completedFuture(new TestReply(request.value() + "-----------done"));
+        };
+        // If the server side is stateful, an error occurs after the server side executes 3-1, and a mechanism for
+        // checking and rolling back needs to be provided.
+        rollbackFunction = (id, request) -> {
+            if (epoch.get() != defaultEpoch) {
+                epoch.set(defaultEpoch);
+            }
+        };
+        rpcServer = createPulsarRpcServer(pulsarClient, requestFunction, rollbackFunction, null);
+
+        ConcurrentHashMap<String, TestReply> resultMap = new ConcurrentHashMap<>();
+        int messageNum = 10;
+        // 3-1.Synchronous Send
+        for (int i = 0; i < messageNum; i++) {
+            String correlationId = correlationIdSupplier.get();
+            TypedMessageBuilder<TestRequest> message = newRequestMessage(rpcClient.getRequestProducer(),
+                    correlationId, synchronousMessage + i);
+            TestReply reply = rpcClient.request(correlationId, message);
+            resultMap.put(correlationId, reply);
+            log.info("[Synchronous] Reply message: {}, KEY: {}", reply.value(), correlationId);
+        }
+
+        // 3-2.Asynchronous Send
+        for (int i = 0; i < messageNum; i++) {
+            String correlationId = correlationIdSupplier.get();
+            TypedMessageBuilder<TestRequest> message = newRequestMessage(rpcClient.getRequestProducer(),
+                    correlationId, asynchronousMessage + i);
+            rpcClient.requestAsync(correlationId, message).whenComplete((replyMessage, e) -> {
+                if (e != null) {
+                    log.error("error", e);
+                } else {
+                    resultMap.put(correlationId, replyMessage);
+                    log.info("[Asynchronous] Reply message: {}, KEY: {}", replyMessage.value(), correlationId);
+                }
+                // Clean up pending request with correlationId.
+                rpcClient.removeFailedRequest(correlationId);
+            });
+        }
+        Awaitility.await().atMost(30, TimeUnit.SECONDS).until(() -> resultMap.size() == messageNum * 2);
+    }
+
+    @Test
     public void testRpcCallWithPattern() throws Exception {
         ProducerBuilder<TestRequest> requestProducerBuilder = pulsarClient.newProducer(requestSchema)
                 .topic(requestTopic)
@@ -147,7 +246,7 @@ public class SimpleRpcCallTest {
                 .producerName("requestProducer");
 
         // 1.Create PulsarRpcClient
-        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, replyTopicPattern);
+        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, replyTopicPattern, null);
 
         // 2.Create PulsarRpcServer
         final int defaultEpoch = 1;
@@ -203,7 +302,7 @@ public class SimpleRpcCallTest {
                 .producerName("requestProducer");
 
         // 1.Create PulsarRpcClient
-        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null);
+        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null, null);
 
         // 2.Create PulsarRpcServer
         final int defaultEpoch = 1;
@@ -272,7 +371,7 @@ public class SimpleRpcCallTest {
                 .producerName("requestProducer");
 
         // 1.Create PulsarRpcClient
-        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null);
+        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerBuilder, null, null);
 
         // 2.Create PulsarRpcServer
         final int defaultEpoch = 1;
@@ -335,13 +434,16 @@ public class SimpleRpcCallTest {
 
     private PulsarRpcClient<TestRequest, TestReply> createPulsarRpcClient(
             PulsarClient pulsarClient, ProducerBuilder<TestRequest> requestProducerBuilder,
-            Pattern replyTopicsPattern) throws IOException {
+            Pattern replyTopicsPattern, RequestCallBack<TestReply> callBack) throws IOException {
         PulsarRpcClientBuilder<TestRequest, TestReply> rpcClientBuilder =
                 PulsarRpcClient.builder(requestSchema, replySchema)
                         .requestProducer(requestProducerBuilder)
                         .replySubscription(replySubBase)
                         .replyTimeout(replyTimeout)
                         .patternAutoDiscoveryInterval(Duration.ofSeconds(1));
+        if (callBack != null) {
+            rpcClientBuilder.requestCallBack(callBack);
+        }
         return replyTopicsPattern == null ? rpcClientBuilder.replyTopic(replyTopic).build(pulsarClient)
                 : rpcClientBuilder.replyTopicsPattern(replyTopicsPattern).build(pulsarClient);
 

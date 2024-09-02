@@ -32,6 +32,7 @@ public class PulsarRpcClientBuilder<T, V> {
     private Duration replyTimeout = Duration.ofSeconds(3);
     private Pattern replyTopicsPattern;
     private Duration patternAutoDiscoveryInterval;
+    private RequestCallBack<V> callBack;
 
     public PulsarRpcClientBuilder(@NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
         this.requestSchema = requestSchema;
@@ -69,7 +70,14 @@ public class PulsarRpcClientBuilder<T, V> {
         return this;
     }
 
+    public PulsarRpcClientBuilder<T, V> requestCallBack(@NonNull RequestCallBack<V> callBack) {
+        this.callBack = callBack;
+        return null;
+    }
+
     public PulsarRpcClient<T, V> build(PulsarClient pulsarClient) throws IOException {
         return PulsarRpcClient.create(pulsarClient, this);
     }
+
+
 }

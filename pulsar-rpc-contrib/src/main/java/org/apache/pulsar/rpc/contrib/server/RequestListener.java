@@ -44,6 +44,7 @@ public class RequestListener<T, V> implements MessageListener<T> {
         }
 
         String correlationId = msg.getKey();
+        String requestSubscription = consumer.getSubscription();
         String replyTopic = msg.getProperty(REPLY_TOPIC);
         T value = msg.getValue();
 
@@ -51,7 +52,7 @@ public class RequestListener<T, V> implements MessageListener<T> {
             requestFunction.apply(value)
                     .orTimeout(replyTimeout, TimeUnit.MILLISECONDS)
                     .thenAccept(reply -> {
-                        sender.sendReply(replyTopic, correlationId, reply, value);
+                        sender.sendReply(replyTopic, correlationId, reply, value, requestSubscription);
                     })
                     .get();
         } catch (ExecutionException e) {
@@ -62,7 +63,8 @@ public class RequestListener<T, V> implements MessageListener<T> {
             } else {
                 log.error("[{}] Error processing request", correlationId, e);
                 sender.sendErrorReply(replyTopic, correlationId,
-                        cause.getClass().getName() + ": " + cause.getMessage(), value);
+                        cause.getClass().getName() + ": " + cause.getMessage(),
+                        value, requestSubscription);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

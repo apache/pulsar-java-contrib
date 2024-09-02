@@ -30,7 +30,6 @@ import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
 
-
 @RequiredArgsConstructor(access = PACKAGE)
 public class PulsarRpcClient<T, V> implements AutoCloseable {
     private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
@@ -39,6 +38,7 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
     @Getter
     private final Producer<T> requestProducer;
     private final Consumer<V> replyConsumer;
+    private final RequestCallBack<V> callback;
 
     public static <T, V> PulsarRpcClient<T, V> create(
             @NonNull PulsarClient client, @NonNull PulsarRpcClientBuilder<T, V> builder) throws IOException {
@@ -53,7 +53,7 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
         RequestSender<T> sender = new RequestSender<>(null == builder.getReplyTopic()
                 ? builder.getReplyTopicsPattern().pattern() : builder.getReplyTopic());
 
-        ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap);
+        ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap, builder.getCallBack());
         Consumer<V> consumer = dispatcherFactory.replyConsumer(
                 builder.getReplyTopic(),
                 replyListener,
@@ -65,8 +65,8 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
                 builder.getReplyTimeout(),
                 sender,
                 producer,
-                consumer
-        );
+                consumer,
+                builder.getCallBack());
     }
 
     public static <T, V> PulsarRpcClientBuilder<T, V> builder(
@@ -80,6 +80,7 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
             pendingRequestsMap.forEach((correlationId, future) -> {
                 future.cancel(false);
             });
+            pendingRequestsMap.clear();
         }
     }
 
@@ -93,19 +94,36 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
         replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
                 .exceptionally(e -> {
                     replyFuture.completeExceptionally(e);
+                    if (callback != null) {
+                        callback.onTimeout(correlationId, e);
+                    }
+                    removeFailedRequest(correlationId);
                     return null;
                 });
         pendingRequestsMap.put(correlationId, replyFuture);
         sender.sendRequest(message, replyTimeoutMillis)
                 .thenAccept(requestMessageId -> {
-                    if (replyFuture.isCompletedExceptionally()) {
-                        pendingRequestsMap.remove(correlationId);
+                    if (replyFuture.isCancelled() || replyFuture.isCompletedExceptionally()) {
+                        removeFailedRequest(correlationId);
+                    } else {
+                        if (callback != null) {
+                            callback.onSendRequestSuccess(correlationId, requestMessageId);
+                        }
                     }
                 }).exceptionally(ex -> {
-                    replyFuture.completeExceptionally(ex);
+                    if (callback != null) {
+                        callback.onSendRequestError(correlationId, ex, replyFuture);
+                    } else {
+                        replyFuture.completeExceptionally(ex);
+                    }
+                    removeFailedRequest(correlationId);
                     return null;
                 });
         return replyFuture;
+    }
+
+    public void removeFailedRequest(String correlationId) {
+        pendingRequestsMap.remove(correlationId);
     }
 
 }
