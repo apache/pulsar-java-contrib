@@ -45,6 +45,8 @@
         <org.testing.version>7.10.2</org.testing.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <google-java-format.version>1.10.0</google-java-format.version>
+        <commons-pool.version>2.12.0</commons-pool.version>
+        <awaitility.version>4.2.0</awaitility.version>
     </properties>
 
     <modules>
@@ -76,6 +78,17 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-pool2</artifactId>
+                <version>${commons-pool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>${awaitility.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -85,7 +98,6 @@
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -99,6 +111,12 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <version>${org.testing.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

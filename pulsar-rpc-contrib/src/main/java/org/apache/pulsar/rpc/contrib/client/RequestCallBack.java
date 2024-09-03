@@ -14,6 +14,8 @@
 package org.apache.pulsar.rpc.contrib.client;
 
 import java.util.concurrent.CompletableFuture;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 
 public interface RequestCallBack<V> {
@@ -27,4 +29,6 @@ public interface RequestCallBack<V> {
     void onReplyError(String correlationId, String subscription, String errorMessage, CompletableFuture<V> replyFuture);
 
     void onTimeout(String correlationId, Throwable t);
+
+    void onReplyMessageAckFailed(String correlationId, Consumer<V> consumer, Message<V> msg, Throwable t);
 }

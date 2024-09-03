@@ -26,6 +26,8 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.ProducerBuilder;
@@ -189,6 +191,16 @@ public class SimpleRpcCallTest {
             public void onTimeout(String correlationId, Throwable t) {
                 log.warn("<onTimeout> CorrelationId[{}] Receive reply message timed out. {}",
                         correlationId, t.getMessage());
+            }
+
+            @Override
+            public void onReplyMessageAckFailed(String correlationId, Consumer<TestReply> consumer,
+                                                Message<TestReply> msg, Throwable t) {
+                consumer.acknowledgeAsync(msg.getMessageId()).exceptionally(ex -> {
+                    log.warn("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
+                            msg.getTopicName(), correlationId, msg.getMessageId(), ex);
+                    return null;
+                });
             }
         };
 

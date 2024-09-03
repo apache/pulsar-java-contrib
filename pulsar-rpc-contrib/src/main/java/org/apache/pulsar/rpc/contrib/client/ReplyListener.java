@@ -40,23 +40,16 @@ public class ReplyListener<V> implements MessageListener<V> {
                 CompletableFuture<V> future = pendingRequestsMap.get(correlationId);
                 String errorMessage = msg.getProperty(ERROR_MESSAGE);
                 if (errorMessage != null) {
-                    if (callBack != null) {
-                        callBack.onReplyError(correlationId, consumer.getSubscription(), errorMessage, future);
-                    } else {
-                        future.completeExceptionally(new Exception(errorMessage));
-                    }
+                    callBack.onReplyError(correlationId, consumer.getSubscription(), errorMessage, future);
                 } else {
-                    if (callBack != null) {
-                        callBack.onReplySuccess(correlationId, consumer.getSubscription(), msg.getValue(), future);
-                    } else {
-                        future.complete(msg.getValue());
-                    }
+                    callBack.onReplySuccess(correlationId, consumer.getSubscription(), msg.getValue(), future);
                 }
             }
         } finally {
             consumer.acknowledgeAsync(msg).exceptionally(ex -> {
                 log.warn("[{}] [{}] Acknowledging message {} failed", msg.getTopicName(), correlationId,
                         msg.getMessageId(), ex);
+                callBack.onReplyMessageAckFailed(correlationId, consumer, msg, ex);
                 return null;
             });
         }

@@ -53,7 +53,10 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
         RequestSender<T> sender = new RequestSender<>(null == builder.getReplyTopic()
                 ? builder.getReplyTopicsPattern().pattern() : builder.getReplyTopic());
 
-        ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap, builder.getCallBack());
+        RequestCallBack<V> callBack = builder.getCallBack() == null ? new DefaultRequestCallBack<>()
+                : builder.getCallBack();
+
+        ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap, callBack);
         Consumer<V> consumer = dispatcherFactory.replyConsumer(
                 builder.getReplyTopic(),
                 replyListener,
@@ -66,7 +69,7 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
                 sender,
                 producer,
                 consumer,
-                builder.getCallBack());
+                callBack);
     }
 
     public static <T, V> PulsarRpcClientBuilder<T, V> builder(
@@ -94,9 +97,7 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
         replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
                 .exceptionally(e -> {
                     replyFuture.completeExceptionally(e);
-                    if (callback != null) {
-                        callback.onTimeout(correlationId, e);
-                    }
+                    callback.onTimeout(correlationId, e);
                     removeRequest(correlationId);
                     return null;
                 });
@@ -106,9 +107,7 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
                     if (replyFuture.isCancelled() || replyFuture.isCompletedExceptionally()) {
                         removeRequest(correlationId);
                     } else {
-                        if (callback != null) {
-                            callback.onSendRequestSuccess(correlationId, requestMessageId);
-                        }
+                        callback.onSendRequestSuccess(correlationId, requestMessageId);
                     }
                 }).exceptionally(ex -> {
                     if (callback != null) {
