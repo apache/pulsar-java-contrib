@@ -29,6 +29,13 @@ import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import org.apache.pulsar.client.api.SubscriptionType;
 
+/**
+ * Facilitates the creation of producers and consumers for Pulsar based on specified schemas and configurations.
+ * This factory simplifies the setup of Pulsar clients for sending and receiving messages in RPC context.
+ *
+ * @param <T> the type parameter for the request messages.
+ * @param <V> the type parameter for the reply messages.
+ */
 @RequiredArgsConstructor
 public class MessageDispatcherFactory<T, V> {
     private final PulsarClient client;
@@ -36,6 +43,13 @@ public class MessageDispatcherFactory<T, V> {
     private final Schema<V> replySchema;
     private final String subscription;
 
+    /**
+     * Creates a Pulsar producer for sending requests. (Pulsar RPC Client side)
+     *
+     * @param requestProducer this is the producer that the user can pass in that contains additional configuration.
+     * @return the created request message producer.
+     * @throws IOException if there is an error creating the producer.
+     */
     public Producer<T> requestProducer(ProducerBuilder<T> requestProducer) throws IOException {
         return requestProducer
                 // allow only one client
@@ -43,6 +57,16 @@ public class MessageDispatcherFactory<T, V> {
                 .create();
     }
 
+    /**
+     * Creates a Pulsar consumer for receiving replies. (Pulsar RPC Client side)
+     *
+     * @param topic the topic from which to consume messages.
+     * @param listener the message listener that handles incoming messages.
+     * @param topicsPattern the pattern matching multiple topics for the consumer.
+     * @param patternAutoDiscoveryInterval the interval for topic auto-discovery.
+     * @return the created reply message consumer.
+     * @throws IOException if there is an error creating the consumer.
+     */
     public Consumer<V> replyConsumer(String topic,
                                          MessageListener<V> listener,
                                          Pattern topicsPattern,
@@ -59,6 +83,16 @@ public class MessageDispatcherFactory<T, V> {
                 : replyConsumerBuilder.topicsPattern(topicsPattern).subscribe();
     }
 
+    /**
+     * Creates a Pulsar consumer for receiving requests. (Pulsar RPC Server side)
+     *
+     * @param topic the topic from which to consume messages.
+     * @param patternAutoDiscoveryInterval the interval for topic auto-discovery.
+     * @param listener the message listener that handles incoming messages.
+     * @param topicsPattern the pattern matching multiple topics for the consumer.
+     * @return the created Consumer.
+     * @throws IOException if there is an error creating the consumer.
+     */
     public Consumer<T> requestConsumer(
             String topic, Duration patternAutoDiscoveryInterval,
             MessageListener<T> listener, Pattern topicsPattern) throws IOException {
@@ -73,6 +107,13 @@ public class MessageDispatcherFactory<T, V> {
                 : consumerBuilder.topicsPattern(topicsPattern).subscribe();
     }
 
+    /**
+     * Creates a Pulsar producer for sending replies. (Pulsar RPC Server side)
+     *
+     * @param topic the topic to which the producer will send messages.
+     * @return the created Producer.
+     * @throws IOException if there is an error creating the producer.
+     */
     public Producer<V> replyProducer(String topic) throws IOException {
         return client
                 .newProducer(replySchema)

@@ -11,4 +11,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * Provides the server-side components necessary for building a RPC system based on Apache Pulsar.
+ * This package includes classes that handle server-side request processing and response dispatching,
+ * leveraging Pulsar's messaging capabilities.
+ *
+ * <p>Key components include:
+ * <ul>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServer} - Facilitates the setup and management of
+ *     Pulsar consumers that process incoming requests and produce responses back to clients.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServerBuilder} - Aids in constructing a
+ *     {@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServer} instance with customized settings.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.RequestListener} - Implements the Pulsar
+ *     {@link org.apache.pulsar.client.api.MessageListener} interface to process messages as RPC requests.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.ReplySender} - Manages sending responses back to clients through
+ *     Pulsar producers.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.ReplyProducerPoolFactory} - Manages a pool of Pulsar producers
+ *     for efficient response dispatching.</li>
+ * </ul>
+ *
+ */
 package org.apache.pulsar.rpc.contrib.server;

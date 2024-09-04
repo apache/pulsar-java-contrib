@@ -27,6 +27,13 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageListener;
 
+/**
+ * Handles incoming Pulsar messages, processes them using a specified function, and sends replies using a
+ * {@link ReplySender}. This listener is typically used on the server side of a Pulsar RPC implementation.
+ *
+ * @param <T> the type of the request messages
+ * @param <V> the type of the response messages
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class RequestListener<T, V> implements MessageListener<T> {
@@ -34,6 +41,13 @@ public class RequestListener<T, V> implements MessageListener<T> {
     private final ReplySender<T, V> sender;
     private final BiConsumer<String, T> rollBackFunction;
 
+    /**
+     * Processes received messages by applying a function to generate replies, which are then sent back
+     * to the client. Handles request timeouts and errors during processing.
+     *
+     * @param consumer The consumer that received the message.
+     * @param msg The message received from the client.
+     */
     @Override
     public void received(Consumer<T> consumer, Message<T> msg) {
         long replyTimeout = Long.parseLong(msg.getProperty(REQUEST_TIMEOUT_MILLIS))

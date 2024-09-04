@@ -11,4 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * This package provides common utilities and constants used across the Apache Pulsar RPC extensions.
+ * It includes helper classes for managing RPC message flows and configurations.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.common.Constants} - Constants for message properties and
+ *     configurations.
+ *     <li>{@link org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory} - Factory methods for configuring
+ *     Pulsar producers and consumers tailored for RPC operations.
+ * </ul>
+ */
 package org.apache.pulsar.rpc.contrib.common;
