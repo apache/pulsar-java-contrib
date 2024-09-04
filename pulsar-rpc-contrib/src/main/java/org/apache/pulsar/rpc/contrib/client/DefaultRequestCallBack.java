@@ -19,6 +19,9 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 
+/**
+ * Default implementation of {@link RequestCallBack} that handles callback events for Pulsar RPC communications.
+ */
 @Slf4j
 public class DefaultRequestCallBack<V> implements RequestCallBack<V> {
 
@@ -53,7 +56,7 @@ public class DefaultRequestCallBack<V> implements RequestCallBack<V> {
     @Override
     public void onReplyMessageAckFailed(String correlationId, Consumer<V> consumer, Message<V> msg, Throwable t) {
         consumer.acknowledgeAsync(msg.getMessageId()).exceptionally(ex -> {
-            log.warn("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
+            log.debug("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
                     msg.getTopicName(), correlationId, msg.getMessageId(), ex);
             return null;
         });

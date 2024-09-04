@@ -22,12 +22,29 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageListener;
 
+/**
+ * Implements the {@link MessageListener} interface to handle reply messages for RPC requests in a Pulsar environment.
+ * This listener manages the lifecycle of reply messages corresponding to each request, facilitating asynchronous
+ * communication patterns and error handling based on callback mechanisms.
+ *
+ * @param <V> The type of the message payload expected in the reply messages.
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class ReplyListener<V> implements MessageListener<V> {
     private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
     private final RequestCallBack<V> callBack;
 
+    /**
+     * Handles the reception of messages from reply-topic. This method is called whenever a message is received
+     * on the subscribed topic. It processes the message based on its correlation ID and manages successful or
+     * erroneous consumption through callbacks.
+     *
+     * @param consumer The consumer that received the message. Provides context for the message such as subscription
+     *                 and topic information.
+     * @param msg The message received from the topic. Contains data including the payload and metadata like the
+     *            correlation ID and potential error messages.
+     */
     @Override
     public void received(Consumer<V> consumer, Message<V> msg) {
         String correlationId = msg.getKey();
