@@ -16,6 +16,7 @@ package org.apache.pulsar.rpc.contrib.common;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.apache.pulsar.client.api.Consumer;
@@ -23,7 +24,6 @@ import org.apache.pulsar.client.api.ConsumerBuilder;
 import org.apache.pulsar.client.api.MessageListener;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.ProducerAccessMode;
-import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
@@ -46,14 +46,15 @@ public class MessageDispatcherFactory<T, V> {
     /**
      * Creates a Pulsar producer for sending requests. (Pulsar RPC Client side)
      *
-     * @param requestProducer this is the producer that the user can pass in that contains additional configuration.
+     * @param requestProducerConfig the configuration map for request producer.
      * @return the created request message producer.
      * @throws IOException if there is an error creating the producer.
      */
-    public Producer<T> requestProducer(ProducerBuilder<T> requestProducer) throws IOException {
-        return requestProducer
+    public Producer<T> requestProducer(Map<String, Object> requestProducerConfig) throws IOException {
+        return client.newProducer(requestSchema)
                 // allow only one client
                 .accessMode(ProducerAccessMode.Exclusive)
+                .loadConf(requestProducerConfig)
                 .create();
     }
 

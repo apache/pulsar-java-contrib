@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.Consumer;
@@ -35,7 +36,7 @@ import org.apache.pulsar.client.api.MessageListener;
  * @param <V> the type of the response messages
  */
 @Slf4j
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class RequestListener<T, V> implements MessageListener<T> {
     private final Function<T, CompletableFuture<V>> requestFunction;
     private final ReplySender<T, V> sender;

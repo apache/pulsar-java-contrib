@@ -13,14 +13,12 @@
  */
 package org.apache.pulsar.rpc.contrib.client;
 
-import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.regex.Pattern;
-import lombok.Getter;
 import lombok.NonNull;
-import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
 
 /**
  * Builder class for constructing a {@link PulsarRpcClient} instance. This builder allows for the
@@ -30,39 +28,16 @@ import org.apache.pulsar.client.api.Schema;
  * @param <T> the type of request message
  * @param <V> the type of reply message
  */
-@Getter
-public class PulsarRpcClientBuilder<T, V> {
-    private final Schema<T> requestSchema;
-    private final Schema<V> replySchema;
-    private ProducerBuilder<T> requestProducer;
-    private String replyTopic;
-    private String replySubscription;
-    private Duration replyTimeout = Duration.ofSeconds(3);
-    private Pattern replyTopicsPattern;
-    private Duration patternAutoDiscoveryInterval;
-    private RequestCallBack<V> callBack;
+public interface PulsarRpcClientBuilder<T, V> {
 
     /**
-     * Constructs a PulsarRpcClientBuilder with the necessary schemas for request and reply messages.
+     * Specifies the producer configuration map for request messages.
      *
-     * @param requestSchema the schema for serializing request messages
-     * @param replySchema the schema for serializing reply messages
-     */
-    public PulsarRpcClientBuilder(@NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
-        this.requestSchema = requestSchema;
-        this.replySchema = replySchema;
-    }
-
-    /**
-     * Specifies the producer builder for request messages.
-     *
-     * @param requestProducer the producer builder for creating request message producers
+     * @param requestProducerConfig Configuration map for creating a request message
+     *                  producer, will call {@link org.apache.pulsar.client.api.ProducerBuilder#loadConf(java.util.Map)}
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> requestProducer(@NonNull ProducerBuilder<T> requestProducer) {
-        this.requestProducer = requestProducer;
-        return this;
-    }
+    PulsarRpcClientBuilder<T, V> requestProducerConfig(@NonNull Map<String, Object> requestProducerConfig);
 
     /**
      * Sets the topic on which reply messages will be sent.
@@ -70,10 +45,7 @@ public class PulsarRpcClientBuilder<T, V> {
      * @param replyTopic the topic for reply messages
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> replyTopic(@NonNull String replyTopic) {
-        this.replyTopic = replyTopic;
-        return this;
-    }
+    PulsarRpcClientBuilder<T, V> replyTopic(@NonNull String replyTopic);
 
     /**
      * Sets the pattern to subscribe to multiple reply topics dynamically.
@@ -81,10 +53,7 @@ public class PulsarRpcClientBuilder<T, V> {
      * @param replyTopicsPattern the pattern matching reply topics
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> replyTopicsPattern(@NonNull Pattern replyTopicsPattern) {
-        this.replyTopicsPattern = replyTopicsPattern;
-        return this;
-    }
+    PulsarRpcClientBuilder<T, V> replyTopicsPattern(@NonNull Pattern replyTopicsPattern);
 
     /**
      * Specifies the subscription name to use for reply messages.
@@ -92,10 +61,7 @@ public class PulsarRpcClientBuilder<T, V> {
      * @param replySubscription the subscription name for reply messages
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> replySubscription(@NonNull String replySubscription) {
-        this.replySubscription = replySubscription;
-        return this;
-    }
+    PulsarRpcClientBuilder<T, V> replySubscription(@NonNull String replySubscription);
 
     /**
      * Sets the timeout for reply messages.
@@ -103,10 +69,7 @@ public class PulsarRpcClientBuilder<T, V> {
      * @param replyTimeout the duration to wait for a reply before timing out
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> replyTimeout(@NonNull Duration replyTimeout) {
-        this.replyTimeout = replyTimeout;
-        return this;
-    }
+    PulsarRpcClientBuilder<T, V> replyTimeout(@NonNull Duration replyTimeout);
 
     /**
      * Sets the interval for auto-discovery of topics matching the pattern.
@@ -114,11 +77,7 @@ public class PulsarRpcClientBuilder<T, V> {
      * @param patternAutoDiscoveryInterval the interval for auto-discovering topics
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> patternAutoDiscoveryInterval(
-            @NonNull Duration patternAutoDiscoveryInterval) {
-        this.patternAutoDiscoveryInterval = patternAutoDiscoveryInterval;
-        return this;
-    }
+    PulsarRpcClientBuilder<T, V> patternAutoDiscoveryInterval(@NonNull Duration patternAutoDiscoveryInterval);
 
     /**
      * Sets the {@link RequestCallBack<V>} handler for various request and reply events.
@@ -126,19 +85,14 @@ public class PulsarRpcClientBuilder<T, V> {
      * @param callBack the callback handler to manage events
      * @return this builder instance for chaining
      */
-    public PulsarRpcClientBuilder<T, V> requestCallBack(@NonNull RequestCallBack<V> callBack) {
-        this.callBack = callBack;
-        return null;
-    }
+    PulsarRpcClientBuilder<T, V> requestCallBack(@NonNull RequestCallBack<V> callBack);
 
     /**
      * Builds and returns a {@link PulsarRpcClient} configured with the current builder settings.
      *
      * @param pulsarClient the client to use for connecting to server
      * @return a new instance of {@link PulsarRpcClient}
-     * @throws IOException if an error occurs during the building of the {@link PulsarRpcClient}
+     * @throws PulsarRpcClientException if an error occurs during the building of the {@link PulsarRpcClient}
      */
-    public PulsarRpcClient<T, V> build(PulsarClient pulsarClient) throws IOException {
-        return PulsarRpcClient.create(pulsarClient, this);
-    }
+    PulsarRpcClient<T, V> build(PulsarClient pulsarClient) throws PulsarRpcClientException;
 }

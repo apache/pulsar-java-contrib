@@ -46,7 +46,7 @@
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <google-java-format.version>1.10.0</google-java-format.version>
         <commons-pool.version>2.12.0</commons-pool.version>
-        <awaitility.version>4.2.0</awaitility.version>
+        <awaitility.version>4.2.2</awaitility.version>
     </properties>
 
     <modules>

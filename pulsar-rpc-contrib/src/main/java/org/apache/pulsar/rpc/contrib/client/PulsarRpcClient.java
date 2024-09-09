@@ -13,22 +13,13 @@
  */
 package org.apache.pulsar.rpc.contrib.client;
 
-import static lombok.AccessLevel.PACKAGE;
-import java.io.IOException;
-import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import org.apache.pulsar.client.api.Consumer;
-import org.apache.pulsar.client.api.Producer;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
-import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
+import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
 
 /**
  * Provides the functionality to send asynchronous requests and handle replies using Apache Pulsar as the
@@ -38,132 +29,63 @@ import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
  * @param <T> The type of the request messages.
  * @param <V> The type of the reply messages.
  */
-@RequiredArgsConstructor(access = PACKAGE)
-public class PulsarRpcClient<T, V> implements AutoCloseable {
-    private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
-    private final Duration replyTimeout;
-    private final RequestSender<T> sender;
-    @Getter
-    private final Producer<T> requestProducer;
-    private final Consumer<V> replyConsumer;
-    private final RequestCallBack<V> callback;
-
-    /**
-     * Creates a new instance of {@link PulsarRpcClient} using the specified builder settings.
-     *
-     * @param client The Pulsar client to use for creating producers and consumers.
-     * @param builder The builder containing configurations for the client.
-     * @return A new instance of {@link PulsarRpcClient}.
-     * @throws IOException if there is an error during the client initialization.
-     */
-    public static <T, V> PulsarRpcClient<T, V> create(
-            @NonNull PulsarClient client, @NonNull PulsarRpcClientBuilder<T, V> builder) throws IOException {
-        ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap = new ConcurrentHashMap<>();
-        MessageDispatcherFactory<T, V> dispatcherFactory = new MessageDispatcherFactory<>(
-                client,
-                builder.getRequestSchema(),
-                builder.getReplySchema(),
-                builder.getReplySubscription());
-
-        Producer<T> producer = dispatcherFactory.requestProducer(builder.getRequestProducer());
-        RequestSender<T> sender = new RequestSender<>(null == builder.getReplyTopic()
-                ? builder.getReplyTopicsPattern().pattern() : builder.getReplyTopic());
-
-        RequestCallBack<V> callBack = builder.getCallBack() == null ? new DefaultRequestCallBack<>()
-                : builder.getCallBack();
-
-        ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap, callBack);
-        Consumer<V> consumer = dispatcherFactory.replyConsumer(
-                builder.getReplyTopic(),
-                replyListener,
-                builder.getReplyTopicsPattern(),
-                builder.getPatternAutoDiscoveryInterval());
-
-        return new PulsarRpcClient<>(
-                pendingRequestsMap,
-                builder.getReplyTimeout(),
-                sender,
-                producer,
-                consumer,
-                callBack);
-    }
+public interface PulsarRpcClient<T, V> extends AutoCloseable {
 
     /**
      * Creates a builder for configuring a new {@link PulsarRpcClient}.
      *
-     * @param requestSchema The schema for request messages.
-     * @param replySchema The schema for reply messages.
      * @return A new instance of {@link PulsarRpcClientBuilder}.
      */
-    public static <T, V> PulsarRpcClientBuilder<T, V> builder(
-            @NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
-        return new PulsarRpcClientBuilder<>(requestSchema, replySchema);
+    static <T, V> PulsarRpcClientBuilder<T, V> builder(@NonNull Schema<T> requestSchema,
+                                                       @NonNull Schema<V> replySchema) {
+        return new PulsarRpcClientBuilderImpl<>(requestSchema, replySchema);
     }
 
     /**
-     * Closes this client and releases any resources associated with it. This includes closing any active
-     * producers and consumers and clearing pending requests.
-     *
-     * @throws PulsarClientException if there is an error during the closing process.
-     */
-    @Override
-    public void close() throws PulsarClientException {
-        try (requestProducer; replyConsumer) {
-            pendingRequestsMap.forEach((correlationId, future) -> {
-                future.cancel(false);
-            });
-            pendingRequestsMap.clear();
-        }
-    }
-
-    /**
-     * Synchronously sends a request and waits for the response.
+     * Synchronously sends a request and waits for the replies.
      *
      * @param correlationId A unique identifier for the request.
-     * @param message The message builder used to build and send the request.
+     * @param value The value used to generate the request message
      * @return The reply value.
-     * @throws Exception if an error occurs during the request or while waiting for the reply.
+     * @throws PulsarRpcClientException if an error occurs during the request or while waiting for the reply.
      */
-    public V request(String correlationId, TypedMessageBuilder<T> message) throws Exception {
-        return requestAsync(correlationId, message).get();
+    default V request(String correlationId, T value) throws PulsarRpcClientException {
+        return request(correlationId, value, Collections.emptyMap());
+    }
+
+    /**
+     * Synchronously sends a request and waits for the replies.
+     *
+     * @param correlationId A unique identifier for the request.
+     * @param value The value used to generate the request message
+     * @param config Configuration map for creating a request producer,
+     *              will call {@link TypedMessageBuilder#loadConf(Map)}
+     * @return The reply value.
+     * @throws PulsarRpcClientException if an error occurs during the request or while waiting for the reply.
+     */
+    V request(String correlationId, T value, Map<String, Object> config) throws PulsarRpcClientException;
+
+    /**
+     * Asynchronously sends a request and returns a future that completes with the reply.
+     *
+     * @param correlationId A unique identifier for the request.
+     * @param value The value used to generate the request message
+     * @return A CompletableFuture that will complete with the reply value.
+     */
+    default CompletableFuture<V> requestAsync(String correlationId, T value) {
+        return requestAsync(correlationId, value, Collections.emptyMap());
     }
 
     /**
      * Asynchronously sends a request and returns a future that completes with the reply.
      *
      * @param correlationId A unique identifier for the request.
-     * @param message The message builder used to build and send the request.
+     * @param value The value used to generate the request message
+     * @param config Configuration map for creating a request producer,
+     *              will call {@link TypedMessageBuilder#loadConf(Map)}
      * @return A CompletableFuture that will complete with the reply value.
      */
-    public CompletableFuture<V> requestAsync(String correlationId, TypedMessageBuilder<T> message) {
-        CompletableFuture<V> replyFuture = new CompletableFuture<>();
-        long replyTimeoutMillis = replyTimeout.toMillis();
-        replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
-                .exceptionally(e -> {
-                    replyFuture.completeExceptionally(e);
-                    callback.onTimeout(correlationId, e);
-                    removeRequest(correlationId);
-                    return null;
-                });
-        pendingRequestsMap.put(correlationId, replyFuture);
-        sender.sendRequest(message, replyTimeoutMillis)
-                .thenAccept(requestMessageId -> {
-                    if (replyFuture.isCancelled() || replyFuture.isCompletedExceptionally()) {
-                        removeRequest(correlationId);
-                    } else {
-                        callback.onSendRequestSuccess(correlationId, requestMessageId);
-                    }
-                }).exceptionally(ex -> {
-                    if (callback != null) {
-                        callback.onSendRequestError(correlationId, ex, replyFuture);
-                    } else {
-                        replyFuture.completeExceptionally(ex);
-                    }
-                    removeRequest(correlationId);
-                    return null;
-                });
-        return replyFuture;
-    }
+    CompletableFuture<V> requestAsync(String correlationId, T value, Map<String, Object> config);
 
     /**
      * Removes a request from the tracking map based on its correlation ID.
@@ -173,8 +95,14 @@ public class PulsarRpcClient<T, V> implements AutoCloseable {
      *
      * @param correlationId The correlation ID of the request to remove.
      */
-    public void removeRequest(String correlationId) {
-        pendingRequestsMap.remove(correlationId);
-    }
+    void removeRequest(String correlationId);
 
+    /**
+     * Closes this client and releases any resources associated with it. This includes closing any active
+     * producers and consumers and clearing pending requests.
+     *
+     * @throws PulsarRpcClientException if there is an error during the closing process.
+     */
+    @Override
+    void close() throws PulsarRpcClientException;
 }

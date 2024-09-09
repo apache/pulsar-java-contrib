@@ -56,7 +56,7 @@ public class DefaultRequestCallBack<V> implements RequestCallBack<V> {
     @Override
     public void onReplyMessageAckFailed(String correlationId, Consumer<V> consumer, Message<V> msg, Throwable t) {
         consumer.acknowledgeAsync(msg.getMessageId()).exceptionally(ex -> {
-            log.debug("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
+            log.warn("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
                     msg.getTopicName(), correlationId, msg.getMessageId(), ex);
             return null;
         });

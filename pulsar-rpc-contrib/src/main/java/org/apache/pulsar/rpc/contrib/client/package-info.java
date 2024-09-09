@@ -23,10 +23,16 @@
  * <p>Key classes and interfaces include:
  * <ul>
  *   <li>{@link org.apache.pulsar.rpc.contrib.client.PulsarRpcClient} - The RPC client used for sending requests
- *   and processing responses.
+ *   and processing replies.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.client.PulsarRpcClientImpl} - PulsarRpcClient implementation classes.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.client.PulsarRpcClientBuilder} - PulsarRpcClient builder.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.client.PulsarRpcClientBuilderImpl} - PulsarRpcClient builder
+ *   implementation classes.
  *   <li>{@link org.apache.pulsar.rpc.contrib.client.RequestSender} - A class for sending requests to the Pulsar server.
  *   <li>{@link org.apache.pulsar.rpc.contrib.client.RequestCallBack} - Defines callback methods to handle
  *   successful request transmissions, errors, and response successes or failures.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.client.DefaultRequestCallBack} - Default implementation of
+ *   RequestCallBack.
  *   <li>{@link org.apache.pulsar.rpc.contrib.client.ReplyListener} - A message listener that receives and
  *   processes reply message from the server.
  * </ul>

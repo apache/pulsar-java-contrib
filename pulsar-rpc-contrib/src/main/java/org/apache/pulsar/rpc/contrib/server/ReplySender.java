@@ -16,6 +16,7 @@ package org.apache.pulsar.rpc.contrib.server;
 import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
 import static org.apache.pulsar.rpc.contrib.common.Constants.SERVER_SUB;
 import java.util.function.BiConsumer;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ import org.apache.pulsar.client.api.TypedMessageBuilder;
  * @param <V> The type of the reply payload.
  */
 @Slf4j
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class ReplySender<T, V> {
     private final KeyedObjectPool<String, Producer<V>> pool;
     private final BiConsumer<String, T> rollBackFunction;

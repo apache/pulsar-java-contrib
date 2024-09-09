@@ -16,6 +16,7 @@ package org.apache.pulsar.rpc.contrib.client;
 import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.Consumer;
@@ -30,7 +31,7 @@ import org.apache.pulsar.client.api.MessageListener;
  * @param <V> The type of the message payload expected in the reply messages.
  */
 @Slf4j
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class ReplyListener<V> implements MessageListener<V> {
     private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
     private final RequestCallBack<V> callBack;
