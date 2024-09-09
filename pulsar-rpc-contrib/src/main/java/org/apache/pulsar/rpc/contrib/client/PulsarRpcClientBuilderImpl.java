@@ -27,7 +27,7 @@ import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
 
 @Slf4j
 @Getter(AccessLevel.PACKAGE)
-public class PulsarRpcClientBuilderImpl<T, V> implements PulsarRpcClientBuilder<T, V> {
+class PulsarRpcClientBuilderImpl<T, V> implements PulsarRpcClientBuilder<T, V> {
     private final Schema<T> requestSchema;
     private final Schema<V> replySchema;
     private Map<String, Object> requestProducerConfig;

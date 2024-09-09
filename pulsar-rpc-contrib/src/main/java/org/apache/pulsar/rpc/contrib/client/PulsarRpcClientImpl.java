@@ -35,7 +35,7 @@ import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
 import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
 
 @RequiredArgsConstructor(access = PACKAGE)
-public class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
+class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
     private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
     private final Duration replyTimeout;
     private final RequestSender<T> sender;
