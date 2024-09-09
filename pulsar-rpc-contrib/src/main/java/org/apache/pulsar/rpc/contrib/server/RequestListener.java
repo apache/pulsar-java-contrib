@@ -37,7 +37,7 @@ import org.apache.pulsar.client.api.MessageListener;
  */
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class RequestListener<T, V> implements MessageListener<T> {
+class RequestListener<T, V> implements MessageListener<T> {
     private final Function<T, CompletableFuture<V>> requestFunction;
     private final ReplySender<T, V> sender;
     private final BiConsumer<String, T> rollBackFunction;

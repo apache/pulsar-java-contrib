@@ -31,7 +31,7 @@ import org.apache.pulsar.client.api.TypedMessageBuilder;
  */
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class RequestSender<T> {
+class RequestSender<T> {
     private final String replyTopic;
 
     /**

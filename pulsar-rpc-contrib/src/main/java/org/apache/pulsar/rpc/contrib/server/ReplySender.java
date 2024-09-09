@@ -36,7 +36,7 @@ import org.apache.pulsar.client.api.TypedMessageBuilder;
  */
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class ReplySender<T, V> {
+class ReplySender<T, V> {
     private final KeyedObjectPool<String, Producer<V>> pool;
     private final BiConsumer<String, T> rollBackFunction;
 

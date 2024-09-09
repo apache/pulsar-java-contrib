@@ -32,7 +32,7 @@ import org.apache.pulsar.client.api.MessageListener;
  */
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class ReplyListener<V> implements MessageListener<V> {
+class ReplyListener<V> implements MessageListener<V> {
     private final ConcurrentHashMap<String, CompletableFuture<V>> pendingRequestsMap;
     private final RequestCallBack<V> callBack;
 

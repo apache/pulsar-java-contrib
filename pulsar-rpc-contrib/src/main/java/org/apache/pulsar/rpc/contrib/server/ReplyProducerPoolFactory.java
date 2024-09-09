@@ -33,7 +33,7 @@ import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
  * @param <V> the type of messages the producers will send
  */
 @RequiredArgsConstructor
-public class ReplyProducerPoolFactory<V> extends BaseKeyedPooledObjectFactory<String, Producer<V>> {
+class ReplyProducerPoolFactory<V> extends BaseKeyedPooledObjectFactory<String, Producer<V>> {
     private final MessageDispatcherFactory<?, V> dispatcherFactory;
 
     /**
