@@ -18,7 +18,6 @@ import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_TIMEOUT_MIL
 import java.util.concurrent.CompletableFuture;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 
@@ -29,7 +28,6 @@ import org.apache.pulsar.client.api.TypedMessageBuilder;
  *
  * @param <T> The type of the payload of the request messages that this sender will handle.
  */
-@Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class RequestSender<T> {
     private final String replyTopic;

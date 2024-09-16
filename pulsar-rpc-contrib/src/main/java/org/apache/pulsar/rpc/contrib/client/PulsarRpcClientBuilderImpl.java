@@ -30,6 +30,7 @@ import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
 class PulsarRpcClientBuilderImpl<T, V> implements PulsarRpcClientBuilder<T, V> {
     private final Schema<T> requestSchema;
     private final Schema<V> replySchema;
+    private String requestTopic;
     private Map<String, Object> requestProducerConfig;
     private String replyTopic;
     private String replySubscription;
@@ -47,6 +48,11 @@ class PulsarRpcClientBuilderImpl<T, V> implements PulsarRpcClientBuilder<T, V> {
     public PulsarRpcClientBuilderImpl(@NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
         this.requestSchema = requestSchema;
         this.replySchema = replySchema;
+    }
+
+    public PulsarRpcClientBuilderImpl<T, V> requestTopic(String requestTopic) {
+        this.requestTopic = requestTopic;
+        return this;
     }
 
     public PulsarRpcClientBuilderImpl<T, V> requestProducerConfig(@NonNull Map<String, Object> requestProducerConfig) {
@@ -82,10 +88,10 @@ class PulsarRpcClientBuilderImpl<T, V> implements PulsarRpcClientBuilder<T, V> {
 
     public PulsarRpcClientBuilderImpl<T, V> requestCallBack(@NonNull RequestCallBack<V> callBack) {
         this.callBack = callBack;
-        return null;
+        return this;
     }
 
-    public PulsarRpcClientImpl<T, V> build(PulsarClient pulsarClient) throws PulsarRpcClientException {
+    public PulsarRpcClient<T, V> build(PulsarClient pulsarClient) throws PulsarRpcClientException {
         if (requestProducerConfig.containsKey("accessMode")
                 && requestProducerConfig.get("accessMode") instanceof ProducerAccessMode
                 && !requestProducerConfig.get("accessMode").equals(ProducerAccessMode.Exclusive)) {

@@ -21,6 +21,8 @@
  *     configurations.
  *     <li>{@link org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory} - Factory methods for configuring
  *     Pulsar producers and consumers tailored for RPC operations.
+ *     <li>{@link org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException} - Exception on PulsarRpc client side.
+ *     <li>{@link org.apache.pulsar.rpc.contrib.common.PulsarRpcServerException} - Exception on PulsarRpc server side.
  * </ul>
  */
 package org.apache.pulsar.rpc.contrib.common;

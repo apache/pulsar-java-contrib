@@ -18,10 +18,13 @@
  *
  * <p>Key components include:
  * <ul>
- *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServer} - Facilitates the setup and management of
- *     Pulsar consumers that process incoming requests and produce responses back to clients.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServer} - The RPC client used for sending replies
+ *     and processing requests.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServerImpl} - PulsarRpcServer implementation classes.
  *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServerBuilder} - Aids in constructing a
  *     {@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServer} instance with customized settings.</li>
+ *     <li>{@link org.apache.pulsar.rpc.contrib.server.PulsarRpcServerBuilderImpl} - PulsarRpcServerBuilder
+ *     implementation classes.</li>
  *     <li>{@link org.apache.pulsar.rpc.contrib.server.RequestListener} - Implements the Pulsar
  *     {@link org.apache.pulsar.client.api.MessageListener} interface to process messages as RPC requests.</li>
  *     <li>{@link org.apache.pulsar.rpc.contrib.server.ReplySender} - Manages sending responses back to clients through

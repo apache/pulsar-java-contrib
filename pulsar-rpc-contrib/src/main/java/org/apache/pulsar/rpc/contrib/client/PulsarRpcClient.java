@@ -20,6 +20,7 @@ import lombok.NonNull;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
+import org.apache.pulsar.shade.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Provides the functionality to send asynchronous requests and handle replies using Apache Pulsar as the
@@ -96,6 +97,9 @@ public interface PulsarRpcClient<T, V> extends AutoCloseable {
      * @param correlationId The correlation ID of the request to remove.
      */
     void removeRequest(String correlationId);
+
+    @VisibleForTesting
+    int pendingRequestSize();
 
     /**
      * Closes this client and releases any resources associated with it. This includes closing any active

@@ -28,11 +28,11 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 import org.apache.pulsar.common.util.ExceptionHandler;
 import org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory;
 import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
+import org.apache.pulsar.shade.com.google.common.annotations.VisibleForTesting;
 
 @RequiredArgsConstructor(access = PACKAGE)
 class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
@@ -70,7 +70,9 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
                 : builder.getCallBack();
         ReplyListener<V> replyListener = new ReplyListener<>(pendingRequestsMap, callBack);
         try {
-            producer = dispatcherFactory.requestProducer(builder.getRequestProducerConfig());
+            producer = dispatcherFactory.requestProducer(
+                    builder.getRequestTopic(),
+                    builder.getRequestProducerConfig());
 
             consumer = dispatcherFactory.replyConsumer(
                     builder.getReplyTopic(),
@@ -88,11 +90,6 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
                 producer,
                 consumer,
                 callBack);
-    }
-
-    public PulsarRpcClientBuilderImpl<T, V> builder(
-            @NonNull Schema<T> requestSchema, @NonNull Schema<V> replySchema) {
-        return new PulsarRpcClientBuilderImpl<>(requestSchema, replySchema);
     }
 
     @Override
@@ -121,7 +118,7 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
         long replyTimeoutMillis = replyTimeout.toMillis();
         replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
                 .exceptionally(e -> {
-                    replyFuture.completeExceptionally(e);
+                    replyFuture.completeExceptionally(new PulsarRpcClientException(e.getMessage()));
                     callback.onTimeout(correlationId, e);
                     removeRequest(correlationId);
                     return null;
@@ -141,7 +138,7 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
                     if (callback != null) {
                         callback.onSendRequestError(correlationId, ex, replyFuture);
                     } else {
-                        replyFuture.completeExceptionally(ex);
+                        replyFuture.completeExceptionally(new PulsarRpcClientException(ex.getMessage()));
                     }
                     removeRequest(correlationId);
                     return null;
@@ -159,6 +156,11 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
 
     public void removeRequest(String correlationId) {
         pendingRequestsMap.remove(correlationId);
+    }
+
+    @VisibleForTesting
+    public int pendingRequestSize() {
+        return pendingRequestsMap.size();
     }
 
 }

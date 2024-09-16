@@ -31,6 +31,14 @@ import org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException;
 public interface PulsarRpcClientBuilder<T, V> {
 
     /**
+     * Specifies the Pulsar topic that this client will send to for requests.
+     *
+     * @param requestTopic the Pulsar topic name
+     * @return this builder instance for chaining
+     */
+    PulsarRpcClientBuilder<T, V> requestTopic(String requestTopic);
+
+    /**
      * Specifies the producer configuration map for request messages.
      *
      * @param requestProducerConfig Configuration map for creating a request message

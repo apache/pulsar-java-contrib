@@ -46,12 +46,14 @@ public class MessageDispatcherFactory<T, V> {
     /**
      * Creates a Pulsar producer for sending requests. (Pulsar RPC Client side)
      *
+     * @param topic request topic name.
      * @param requestProducerConfig the configuration map for request producer.
      * @return the created request message producer.
      * @throws IOException if there is an error creating the producer.
      */
-    public Producer<T> requestProducer(Map<String, Object> requestProducerConfig) throws IOException {
+    public Producer<T> requestProducer(String topic, Map<String, Object> requestProducerConfig) throws IOException {
         return client.newProducer(requestSchema)
+                .topic(topic)
                 // allow only one client
                 .accessMode(ProducerAccessMode.Exclusive)
                 .loadConf(requestProducerConfig)

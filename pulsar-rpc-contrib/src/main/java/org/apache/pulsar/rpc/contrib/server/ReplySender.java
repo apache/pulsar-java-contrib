@@ -50,7 +50,7 @@ class ReplySender<T, V> {
      * @param sub           The subscriber name involved in this interaction.
      */
     @SneakyThrows
-    public void sendReply(String topic, String correlationId, V reply, T value, String sub) {
+    void sendReply(String topic, String correlationId, V reply, T value, String sub) {
         onSend(topic, correlationId, msg -> msg.value(reply), value, sub);
     }
 
@@ -64,7 +64,7 @@ class ReplySender<T, V> {
      * @param sub           The subscriber name involved in this interaction.
      */
     @SneakyThrows
-    public void sendErrorReply(String topic, String correlationId, String errorMessage, T value, String sub) {
+    void sendErrorReply(String topic, String correlationId, String errorMessage, T value, String sub) {
         onSend(topic, correlationId, msg -> msg.property(ERROR_MESSAGE, errorMessage).value(null), value, sub);
     }
 
@@ -79,7 +79,7 @@ class ReplySender<T, V> {
      * @param sub           The subscriber name to be included in the message metadata.
      */
     @SneakyThrows
-    public void onSend(String topic,
+    void onSend(String topic,
                        String correlationId,
                        java.util.function.Consumer<TypedMessageBuilder<V>> consumer,
                        T value,
