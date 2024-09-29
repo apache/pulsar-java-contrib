@@ -46,12 +46,9 @@ public abstract class PulsarRpcBase {
     protected PulsarRpcClient<TestRequest, TestReply> rpcClient;
     protected PulsarRpcServer<TestRequest, TestReply> rpcServer;
 
-    // protected Function<TestRequest, CompletableFuture<TestReply>> requestFunction;
-    // protected BiConsumer<String, TestRequest> rollbackFunction;
-
     protected final void internalSetup() throws Exception {
-        pulsarAdmin = PulsarAdmin.builder().serviceHttpUrl("http://localhost:8080").build();
-        pulsarClient = PulsarClient.builder().serviceUrl("pulsar://localhost:6650").build();
+        pulsarAdmin = SingletonPulsarContainer.createPulsarAdmin();
+        pulsarClient = SingletonPulsarContainer.createPulsarClient();
     }
 
     protected final void internalCleanup() throws Exception {
