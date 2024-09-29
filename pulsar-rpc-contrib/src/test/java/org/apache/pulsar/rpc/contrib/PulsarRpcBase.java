@@ -27,7 +27,8 @@ import org.apache.pulsar.rpc.contrib.server.PulsarRpcServer;
 @Setter
 public abstract class PulsarRpcBase {
     protected final Supplier<String> correlationIdSupplier = () -> randomUUID().toString();
-    protected final String topicPrefix = "public/default/";
+    protected final String topicPrefix = "persistent://public/default/";
+    // protected final String topicPrefix = "public/default/";
     protected String requestTopic;
     protected String replyTopic;
     Pattern requestTopicPattern;
@@ -67,8 +68,8 @@ public abstract class PulsarRpcBase {
     protected void setupTopic(String topicBase) throws Exception {
         this.requestTopic = topicBase + "-request";
         this.replyTopic = topicBase + "-reply";
-        this.requestTopicPattern = Pattern.compile(topicPrefix + requestTopic + "-.*");
-        this.replyTopicPattern = Pattern.compile(topicPrefix + replyTopic + "-.*");
+        this.requestTopicPattern = Pattern.compile(topicPrefix + requestTopic + ".*");
+        this.replyTopicPattern = Pattern.compile(topicPrefix + replyTopic + ".*");
         this.requestSubBase = requestTopic + "-sub";
         this.replySubBase = replyTopic + "-sub";
         pulsarAdmin.topics().createPartitionedTopic(requestTopic, 10);
