@@ -30,6 +30,7 @@ import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.MessageRoutingMode;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
+import org.apache.pulsar.rpc.contrib.base.PulsarRpcBase;
 import org.apache.pulsar.rpc.contrib.client.PulsarRpcClient;
 import org.apache.pulsar.rpc.contrib.client.PulsarRpcClientBuilder;
 import org.apache.pulsar.rpc.contrib.client.RequestCallBack;
@@ -128,7 +129,8 @@ public class SimpleRpcCallTest extends PulsarRpcBase {
         requestProducerConfigMap.put("producerName", "requestProducer");
         requestProducerConfigMap.put("messageRoutingMode", MessageRoutingMode.RoundRobinPartition);
 
-        AtomicInteger counter = new AtomicInteger();
+        Map<String, AtomicInteger> resultMap = new ConcurrentHashMap<>();
+        final int ackNums = 2;
 
         RequestCallBack<TestReply> callBack = new RequestCallBack<>() {
             @Override
@@ -150,7 +152,9 @@ public class SimpleRpcCallTest extends PulsarRpcBase {
                                        TestReply value, CompletableFuture<TestReply> replyFuture) {
                 log.info("<onReplySuccess> CorrelationId[{}] Subscription[{}] Receive reply message success. Value: {}",
                         correlationId, subscription, value);
-                counter.incrementAndGet();
+                if (resultMap.get(correlationId).getAndIncrement() == ackNums - 1) {
+                    rpcClient.removeRequest(correlationId);
+                }
                 replyFuture.complete(value);
             }
 
@@ -208,9 +212,14 @@ public class SimpleRpcCallTest extends PulsarRpcBase {
             String correlationId = correlationIdSupplier.get();
             TestRequest message = new TestRequest(asynchronousMessage + i);
             requestMessageConfigMap.put(TypedMessageBuilder.CONF_EVENT_TIME, System.currentTimeMillis());
+            resultMap.put(correlationId, new AtomicInteger());
             rpcClient.requestAsync(correlationId, message, requestMessageConfigMap);
         }
-        Awaitility.await().atMost(20, TimeUnit.SECONDS).until(() -> counter.get() == messageNum * 3);
+        Awaitility.await().atMost(20, TimeUnit.SECONDS).until(() -> {
+            AtomicInteger success = new AtomicInteger();
+            resultMap.forEach((__, count) -> success.getAndAdd(count.get()));
+            return success.get() == messageNum * ackNums;
+        });
         rpcServer1.close();
         rpcServer2.close();
         rpcServer3.close();

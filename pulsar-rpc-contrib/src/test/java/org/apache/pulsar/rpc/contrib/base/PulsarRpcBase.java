@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.pulsar.rpc.contrib;
+package org.apache.pulsar.rpc.contrib.base;
 
 import static java.util.UUID.randomUUID;
 import java.time.Duration;
@@ -31,8 +31,8 @@ public abstract class PulsarRpcBase {
     // protected final String topicPrefix = "public/default/";
     protected String requestTopic;
     protected String replyTopic;
-    Pattern requestTopicPattern;
-    Pattern replyTopicPattern;
+    protected Pattern requestTopicPattern;
+    protected Pattern replyTopicPattern;
     protected String requestSubBase;
     protected String replySubBase;
     protected Duration replyTimeout = Duration.ofSeconds(3);

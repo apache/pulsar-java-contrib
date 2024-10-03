@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.rpc.contrib.base.PulsarRpcBase;
 import org.apache.pulsar.rpc.contrib.server.PulsarRpcServer;
 import org.apache.pulsar.rpc.contrib.server.PulsarRpcServerBuilder;
 import org.testng.annotations.AfterMethod;

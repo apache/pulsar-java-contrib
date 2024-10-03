@@ -25,6 +25,7 @@ import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.MessageRoutingMode;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
+import org.apache.pulsar.rpc.contrib.base.PulsarRpcBase;
 import org.apache.pulsar.rpc.contrib.client.PulsarRpcClient;
 import org.apache.pulsar.rpc.contrib.client.RequestCallBack;
 import org.awaitility.Awaitility;
