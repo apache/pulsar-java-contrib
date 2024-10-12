@@ -7,7 +7,7 @@ PROPOSAL HEALTH CHECK
 I can read the design document and understand the problem statement and what you plan to change *without* resorting to a couple of hours of code reading just to start having a high level understanding of the change.
 
 IMAGES
-If you need diagrams, avoid attaching large files. You can use [MermaidJS]([url](https://mermaid.js.org/)) as a simple language to describe many types of diagrams.
+If you need the diagrams, please create a folder named pcip-XXX under the pcip/static/img path and put the images in it.
 
 THIS COMMENTS
 Please remove them when done.

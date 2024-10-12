@@ -66,6 +66,10 @@ None
 
 # High Level Design
 
+### Architecture Diagram
+
+![RPC.drawio](static/img/pcip-1/pulsar_RPC.png)
+
 ## Implementing RPC in Pulsar RPC Framework
 
 1. **pulsar-rpc-client side**
