@@ -2,10 +2,13 @@
 RULES
 * Never place a link to an external site like Google Doc. The proposal should be in this issue entirely.
 * Use a spelling and grammar checker tools if available for you (there are plenty of free ones).
+
 PROPOSAL HEALTH CHECK
 I can read the design document and understand the problem statement and what you plan to change *without* resorting to a couple of hours of code reading just to start having a high level understanding of the change.
+
 IMAGES
 If you need the diagrams, please create a folder named pcip-XXX under the pcip/static/img path and put the images in it.
+
 THIS COMMENTS
 Please remove them when done.
 -->
@@ -16,11 +19,14 @@ Please remove them when done.
 
 <!--
 Describes all the knowledge you need to know in order to understand all the other sections in this PCIP
+
 * Give a high level explanation on all concepts you will be using throughout this document. For example, if you want to talk about Persistent Subscriptions, explain briefly (1 paragraph) what this is. If you're going to talk about Transaction Buffer, explain briefly what this is. 
   If you're going to change something specific, then go into more detail about it and how it works. 
 * Provide links where possible if a person wants to dig deeper into the background information. 
+
 DON'T
 * Do not include links *instead* explanation. Do provide links for further explanation.
+
 (They also included the motivation there, but ignore it as we place that in Motivation section explicitly)
 -->
 
@@ -28,6 +34,7 @@ DON'T
 
 <!--
 Describe the problem this proposal is trying to solve.
+
 * Explain what is the problem you're trying to solve - current situation.
 * This section is the "Why" of your proposal.
 -->
@@ -53,8 +60,10 @@ Describe what you have decided to keep out of scope, perhaps left for a differen
 Describe the design of your solution in *high level*.
 Describe the solution end to end, from a birds-eye view.
 Don't go into implementation details in this section.
+
 I should be able to finish reading from beginning of the PCIP to here (including) and understand the feature and 
 how you intend to solve it, end to end.
+
 DON'T
 * Avoid code snippets, unless it's essential to explain your intent.
 -->
@@ -82,6 +91,7 @@ Clearly mark any changes which are BREAKING backward compatability.
 ### Public API
 <!--
 When adding a new endpoint to the REST API, please make sure to document the following:
+
 * path
 * query parameters
 * HTTP body parameters, usually as JSON.
