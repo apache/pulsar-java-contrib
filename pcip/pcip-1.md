@@ -53,7 +53,7 @@ You can directly use Pulsar's own message call tracking, monitoring, and logging
 
 ## In Scope
 
-- To implement a pulsar-rpc-client similar to pulsar-client, we can encapsulate request request as a `request message` 
+- To implement a pulsar-rpc-client similar to pulsar-client, we can encapsulate request as a `request message` 
   and send it to `request topic`. This is a pulsar topic dedicated to receiving requests.
 - Implement a pulsar-rpc-server. Internally, the pulsar consumer is used to monitor and receive the message in the 
   `request topic`, and custom logic processing is supported. Finally, the processed results (including possible 
