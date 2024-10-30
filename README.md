@@ -21,3 +21,10 @@ pulsar-java-contrib is actively in development.  If you have some common use cas
 Please [open an issue](https://github.com/apache/pulsar-java-contrib/issues/new) to share your idea or
 suggestion.  PRs are always welcome and greatly appreciated, but for larger functional changes a pre-coding introduction
 can be helpful to ensure this is the correct place and that active or conflicting efforts don't exist.
+
+## Development Process
+Compared with [pulsar](https://github.com/apache/pulsar) , [pulsar-java-contrib](https://github.com/apache/pulsar-java-contrib) is faster, and there is no need to send emails for DISCUSSION and VOTE. 
+it can be summarized as follows:
+1. for simple changes, you only need to submit a PR for code changes 
+2. for larger improvement proposal, you need to submit a PR for code changes + a design document (the file is placed in pcip/pcip-xxx.md)
+For detailed development process description, see: pcip/README.md
