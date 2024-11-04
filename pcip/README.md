@@ -21,7 +21,7 @@ It is not a goal for PCIP to add undue process or slow-down the development.
 ### When is a PCIP required?
 
 * Any new feature for Pulsar Java Contrib
-* Any change to the semantic of existing functionality, even when current behavior is incorrect.
+* Any change to the semantic of existing functionality
 * Any large code change that will touch multiple components
 * Any change to the configuration
 
