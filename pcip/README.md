@@ -29,7 +29,6 @@ It is not a goal for PCIP to add undue process or slow-down the development.
 
 * Bug-fixes
 * Documentation changes
-* Small website changes
 * Build scripts changes (except: a complete rewrite)
 
 ### Who can create a PCIP?
