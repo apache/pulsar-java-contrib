@@ -28,7 +28,7 @@ It is not a goal for PCIP to add undue process or slow-down the development.
 ### When is a PCIP *not* required?
 
 * Bug-fixes
-* Small documentation changes
+* Documentation changes
 * Small website changes
 * Build scripts changes (except: a complete rewrite)
 
