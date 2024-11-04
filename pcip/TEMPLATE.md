@@ -28,7 +28,7 @@ DON'T
 * Do not include links *instead* explanation. Do provide links for further explanation.
 
 EXAMPLES
-* See [PCIP-1](https://github.com/apache/pulsar-java-contrib/pull/8), Background section to get an understanding on how you add the background knowledge needed.
+* See [PCIP-2](https://github.com/apache/pulsar-java-contrib/pull/6), Background section to get an understanding on how you add the background knowledge needed.
   (They also included the motivation there, but ignore it as we place that in Motivation section explicitly).
 -->
 
@@ -103,63 +103,14 @@ When adding a new endpoint to the REST API, please make sure to document the fol
   This is the place to document the errors.
 -->
 
-### Binary protocol
-
 ### Configuration
 
 ### CLI
 
-### Metrics
+# Get started
+
+## Quick Start
 
 <!--
-For each metric provide:
-* Full name
-* Description
-* Attributes (labels)
-* Unit
+Introduce how to use it and teach users how to use it quickly
 -->
-
-
-# Monitoring
-
-<!-- 
-Describe how the changes you make in this proposal should be monitored. 
-Don't describe the detailed metrics - they should be at "Public-facing Changes" / "Metrics" section.
-Describe how the user will use the metrics to monitor the feature: Which alerts they should set up, which thresholds, ...
--->
-
-# Backward & Forward Compatibility
-
-## Upgrade
-
-<!--
-Specify the list of instructions, if there are such, needed to perform before/after upgrading to Pulsar version containing this feature.
--->
-
-## Downgrade / Rollback
-
-<!--
-Describe a cookbook detailing the steps required to rollback Pulsar to previous version *without* this feature.
--->
-
-## Pulsar Geo-Replication Upgrade & Downgrade/Rollback Considerations
-
-<!--
-Describe what needs to be considered in Pulsar Geo-Replication in the upgrade and possible downgrade/rollback of this feature.
--->
-
-# Alternatives
-
-<!--
-If there are alternatives that were already considered by the authors or, after the discussion, by the community, and were rejected, please list them here along with the reason why they were rejected.
--->
-
-# General Notes
-
-# Links
-
-<!--
-Updated afterwards
--->
-* Mailing List discussion thread:
-* Mailing List voting thread:

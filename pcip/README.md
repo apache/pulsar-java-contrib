@@ -39,7 +39,7 @@ Any person willing to contribute to the Apache Pulsar Java Contrib project is we
 The process works in the following way:
 
 1. Fork https://github.com/apache/pulsar-java-contrib repository (Using the fork button on GitHub).
-2. Clone the repository, and on it, copy the file `pcip/TEMPLATE.md` and name it `pcip-xxx.md`. The number `xxx` should be the next sequential number after the last contributed PCIP. You view the list of contributed PIPs (at any status) as a list of Pull Requests having a "PCIP" label. Use the link [here](https://github.com/apache/pulsar-java-contrib/pulls?q=is%3Apr+label%3APCIP+) as shortcut.
+2. Clone the repository, and on it, copy the file `pcip/TEMPLATE.md` and name it `pcip-xxx.md`. The number `xxx` should be the next sequential number after the last contributed PCIP. You view the list of contributed PIPs (at any status) as a list of Pull Requests having a "PCIP" label. Use the link [here](https://github.com/apache/pulsar-java-contrib/pulls?q=is%3Apr+%22PCIP-%22+in%3Atitle+sort%3Acreated-desc) as shortcut.
 3. Write the proposal following the section outlined by the template and the explanation for each section in the comment it contains (you can delete the comment once done).
    * If you need the diagrams, please create a folder named pcip-XXX under the [pcip/static/img](https://github.com/apache/pulsar-java-contrib/tree/master/pcip/static/img) path and put the images in.
 4. Create GitHub Pull request (PR). The PR title should be `[improve][pcip] PCIP-xxx: {title}`, where the `xxx` match the number given in previous step (file-name). Replace `{title}` with a short title to your proposal.
@@ -56,7 +56,7 @@ To speed up the development process:
 You can the view list of PCIPs previously managed by GitHub [here](https://github.com/apache/pulsar-java-contrib/tree/master/pcip)
 
 ### List of PCIPs
-1. You can view all PCIPs (besides the historical ones) as the list of Pull Requests having title starting with `[improve][pcip] PCIP-`. Here is the [link](https://github.com/apache/pulsar-java-contrib/pulls?q=is%3Apr+title%3A%22%5Bpcip%5D%5Bdesign%5D+PCIP-%22) for it.
+1. You can view all PCIPs (besides the historical ones) as the list of Pull Requests having title starting with `PCIP-`. Here is the [link](https://github.com/apache/pulsar-java-contrib/pulls?q=is%3Apr+%22PCIP-%22+in%3Atitle+sort%3Acreated-desc) for it.
     - Merged PR means the PCIP was accepted.
     - Closed PR means the PCIP was rejected.
     - Open PR means the PCIP was submitted and is in the process of discussion.
