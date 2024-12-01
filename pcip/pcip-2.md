@@ -556,39 +556,64 @@ public interface RequestCallBack<V> {
 ## Quick Start
 
 **Let's take a simple example to see how we can use the new SDK:**
+
+1. Some basic configurations.
 ```java
-@Test
-public void testRpcCall() throws Exception {
-    setupTopic("testRpcCall");
+    PulsarClient pulsarClient = PulsarClient.builder().serviceUrl("pulsar://localhost:6650").build();
+    Schema<TestRequest> requestSchema = Schema.JSON(TestRequest.class);
+    Schema<TestReply> replySchema = Schema.JSON(TestReply.class);
+    String requestTopic = "testRpcCall-request";
     Map<String, Object> requestProducerConfigMap = new HashMap<>();
-    requestProducerConfigMap.put("producerName", "requestProducer");
-    requestProducerConfigMap.put("messageRoutingMode", MessageRoutingMode.RoundRobinPartition);
+        requestProducerConfigMap.put("producerName", "requestProducer");
+        requestProducerConfigMap.put("messageRoutingMode", MessageRoutingMode.RoundRobinPartition);
+    String replySubBase = "testRpcCall-reply-sub";
+    String requestSubscription = "testRpcCall-request-sub";
+    Duration replyTimeout = Duration.ofSeconds(3);
 
-    // 1.Create PulsarRpcClient
-    rpcClient = createPulsarRpcClient(pulsarClient, requestProducerConfigMap, null, null);
+    public record TestRequest(String value) {
+    }
 
-    // 2.Create PulsarRpcServerImpl
+    public record TestReply(String value) {
+    }
+```
+
+2. We create an RPC Server.
+```java
     final int defaultEpoch = 1;
     AtomicInteger epoch = new AtomicInteger(defaultEpoch);
     // What do we do when we receive the request message
-    requestFunction = request -> {
+    Function<TestRequest, CompletableFuture<TestReply>> requestFunction = request -> {
         epoch.getAndIncrement();
         return CompletableFuture.completedFuture(new TestReply(request.value() + "-----------done"));
     };
     // If the server side is stateful, an error occurs after the server side executes 3-1, and a mechanism for
     // checking and rolling back needs to be provided.
-    rollbackFunction = (id, request) -> {
-        if (epoch.get() != defaultEpoch) {
-            epoch.set(defaultEpoch);
-        }
+    BiConsumer<String, TestRequest> rollbackFunction = (id, request) -> {
+            if (epoch.get() != defaultEpoch) {
+                epoch.set(defaultEpoch);
+            }
     };
-    rpcServer = createPulsarRpcServer(pulsarClient, requestSubBase, requestFunction, rollbackFunction, null);
-    ConcurrentHashMap<String, TestReply> resultMap = new ConcurrentHashMap<>();
+    PulsarRpcServer<TestRequest, TestReply> rpcServer =
+            PulsarRpcServer.builder(requestSchema, replySchema)
+                    .requestSubscription(requestSubscription)
+                    .patternAutoDiscoveryInterval(Duration.ofSeconds(1))
+                    .build(pulsarClient, requestFunction, rollbackFunction);
+```
 
-    Map<String, Object> requestMessageConfigMap = new HashMap<>();
-    requestMessageConfigMap.put(TypedMessageBuilder.CONF_DISABLE_REPLICATION, true);
+3. We create an RPC Client.
+```java
+    PulsarRpcClient<TestRequest, TestReply> rpcClient =
+        PulsarRpcClient.builder(requestSchema, replySchema)
+                .requestTopic(requestTopic)
+                .requestProducerConfig(requestProducerConfigMap)
+                .replySubscription(replySubBase)
+                .replyTimeout(replyTimeout)
+                .patternAutoDiscoveryInterval(Duration.ofSeconds(1))
+                .build(pulsarClient);
+```
 
-    // 3-1.Synchronous Send
+4. We can synchronize the sending of requests.
+```java
     for (int i = 0; i < messageNum; i++) {
         String correlationId = correlationIdSupplier.get();
         TestRequest message = new TestRequest(synchronousMessage + i);
@@ -599,8 +624,11 @@ public void testRpcCall() throws Exception {
         log.info("[Synchronous] Reply message: {}, KEY: {}", reply.value(), correlationId);
         rpcClient.removeRequest(correlationId);
     }
+```
 
-    // 3-2.Asynchronous Send
+
+5. We can also send requests asynchronously.
+```java
     for (int i = 0; i < messageNum; i++) {
         String asyncCorrelationId = correlationIdSupplier.get();
         TestRequest message = new TestRequest(asynchronousMessage + i);
@@ -616,6 +644,75 @@ public void testRpcCall() throws Exception {
             rpcClient.removeRequest(asyncCorrelationId);
         });
     }
-    Awaitility.await().atMost(30, TimeUnit.SECONDS).until(() -> resultMap.size() == messageNum * 2);
-}
+```
+
+6. **We can also use `org.apache.pulsar.rpc.contrib.client.RequestCallBack` to receive reply messages. (Recommended to use this method)**
+```java
+    Map<String, AtomicInteger> resultMap = new ConcurrentHashMap<>();
+    final int ackNums = 2;
+
+    RequestCallBack<TestReply> callBack = new RequestCallBack<>() {
+        @Override
+        public void onSendRequestSuccess(String correlationId, MessageId messageId) {
+            log.info("<onSendRequestSuccess> CorrelationId[{}] Send request message success. MessageId: {}",
+                    correlationId, messageId);
+        }
+
+        @Override
+        public void onSendRequestError(String correlationId, Throwable t,
+                                       CompletableFuture<TestReply> replyFuture) {
+            log.warn("<onSendRequestError> CorrelationId[{}] Send request message failed. {}",
+                    correlationId, t.getMessage());
+            replyFuture.completeExceptionally(t);
+        }
+
+        @Override
+        public void onReplySuccess(String correlationId, String subscription,
+                                   TestReply value, CompletableFuture<TestReply> replyFuture) {
+            log.info("<onReplySuccess> CorrelationId[{}] Subscription[{}] Receive reply message success. Value: {}",
+                    correlationId, subscription, value);
+            if (resultMap.get(correlationId).getAndIncrement() == ackNums - 1) {
+                rpcClient.removeRequest(correlationId);
+            }
+            replyFuture.complete(value);
+        }
+
+        @Override
+        public void onReplyError(String correlationId, String subscription,
+                                 String errorMessage, CompletableFuture<TestReply> replyFuture) {
+            log.warn("<onReplyError> CorrelationId[{}] Subscription[{}] Receive reply message failed. {}",
+                    correlationId, subscription, errorMessage);
+            replyFuture.completeExceptionally(new Exception(errorMessage));
+        }
+
+        @Override
+        public void onTimeout(String correlationId, Throwable t) {
+            log.warn("<onTimeout> CorrelationId[{}] Receive reply message timed out. {}",
+                    correlationId, t.getMessage());
+        }
+
+        @Override
+        public void onReplyMessageAckFailed(String correlationId, Consumer<TestReply> consumer,
+                                            Message<TestReply> msg, Throwable t) {
+            consumer.acknowledgeAsync(msg.getMessageId()).exceptionally(ex -> {
+                log.warn("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
+                        msg.getTopicName(), correlationId, msg.getMessageId(), ex);
+                return null;
+            });
+        }
+    };
+```
+
+And set the callback when creating the RPC Client.
+```java
+    PulsarRpcClient<TestRequest, TestReply> rpcClient =
+        PulsarRpcClient.builder(requestSchema, replySchema)
+                .requestTopic(requestTopic)
+                .requestProducerConfig(requestProducerConfigMap)
+                .replySubscription(replySubBase)
+                .replyTimeout(replyTimeout)
+                .patternAutoDiscoveryInterval(Duration.ofSeconds(1))
+                // Set callback.
+                .requestCallBack(callBack)
+                .build(pulsarClient);
 ```
