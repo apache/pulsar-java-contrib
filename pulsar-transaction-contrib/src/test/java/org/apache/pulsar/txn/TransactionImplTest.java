@@ -31,6 +31,7 @@ import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.transaction.TxnID;
 import org.apache.pulsar.txn.impl.TransactionImpl;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 public class TransactionImplTest {
@@ -40,7 +41,7 @@ public class TransactionImplTest {
   private List<Consumer<?>> mockConsumers;
   private List<MessageId> messageIds;
 
-  @BeforeClass
+  @BeforeMethod
   public void setUp() {
     mockTransaction = mock(org.apache.pulsar.client.api.transaction.Transaction.class);
     mockConsumers = new ArrayList<>();
