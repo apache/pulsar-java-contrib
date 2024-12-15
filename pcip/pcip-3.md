@@ -3,7 +3,8 @@
 When users consume messages using the Fail-over subscription mode and confirm messages using cumulative Ack, duplicate consumption may occur. In this case, even if users use Transaction, they cannot achieve Just-Once.
 As shown in the figure below, in failover mode, the two consumer1 and consumer2 started simultaneously frequently undergo two disconnection switches.
 Finally, Consumer1 consumed M1, M2, M4, M5; Consumer2 consumed M1, M2, M3. M1 and M2 were consumed twice.
-![image.png](static/img/pcip-3/image.png)
+
+![cumulative-ack-issue.png](static/img/pcip-3/cumulative-ack-issue.png)
 
 # Goals
 Solve the problem of cumulative ack consumption duplication by designing a new transaction API.
