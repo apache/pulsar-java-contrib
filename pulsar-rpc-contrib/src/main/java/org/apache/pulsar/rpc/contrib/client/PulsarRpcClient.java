@@ -16,6 +16,7 @@ package org.apache.pulsar.rpc.contrib.client;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
@@ -87,6 +88,62 @@ public interface PulsarRpcClient<T, V> extends AutoCloseable {
      * @return A CompletableFuture that will complete with the reply value.
      */
     CompletableFuture<V> requestAsync(String correlationId, T value, Map<String, Object> config);
+
+    /**
+     * Deliver the message only at or after the specified absolute timestamp.
+     * Asynchronously sends a request and returns a future that completes with the reply.
+     *
+     * @param correlationId A unique identifier for the request.
+     * @param value The value used to generate the request message
+     * @param timestamp Absolute timestamp indicating when the message should be delivered to rpc-server.
+     * @return A CompletableFuture that will complete with the reply value.
+     */
+    default CompletableFuture<V> requestAtAsync(String correlationId, T value, long timestamp) {
+        return requestAtAsync(correlationId, value, Collections.emptyMap(), timestamp);
+    }
+
+    /**
+     * Deliver the message only at or after the specified absolute timestamp.
+     * Asynchronously sends a request and returns a future that completes with the reply.
+     *
+     * @param correlationId A unique identifier for the request.
+     * @param value The value used to generate the request message
+     * @param config Configuration map for creating a request producer,
+     *              will call {@link TypedMessageBuilder#loadConf(Map)}
+     * @param timestamp Absolute timestamp indicating when the message should be delivered to rpc-server.
+     * @return A CompletableFuture that will complete with the reply value.
+     */
+    CompletableFuture<V> requestAtAsync(String correlationId, T value, Map<String, Object> config,
+                                        long timestamp);
+
+    /**
+     * Request to deliver the message only after the specified relative delay.
+     * Asynchronously sends a request and returns a future that completes with the reply.
+     *
+     * @param correlationId A unique identifier for the request.
+     * @param value The value used to generate the request message
+     * @param delay The amount of delay before the message will be delivered.
+     * @param unit The time unit for the delay.
+     * @return A CompletableFuture that will complete with the reply value.
+     */
+    default CompletableFuture<V> requestAfterAsync(String correlationId, T value, long delay, TimeUnit unit) {
+        return requestAfterAsync(correlationId, value, Collections.emptyMap(), delay, unit);
+    }
+
+    /**
+     * Request to deliver the message only after the specified relative delay.
+     * Asynchronously sends a request and returns a future that completes with the reply.
+     *
+     * @param correlationId A unique identifier for the request.
+     * @param value The value used to generate the request message
+     * @param config Configuration map for creating a request producer,
+     *              will call {@link TypedMessageBuilder#loadConf(Map)}
+     * @param delay The amount of delay before the message will be delivered.
+     * @param unit The time unit for the delay.
+     * @return A CompletableFuture that will complete with the reply value.
+     */
+    CompletableFuture<V> requestAfterAsync(String correlationId, T value, Map<String, Object> config,
+                                                  long delay, TimeUnit unit);
 
     /**
      * Removes a request from the tracking map based on its correlation ID.

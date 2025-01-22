@@ -436,6 +436,118 @@ public class SimpleRpcCallTest extends PulsarRpcBase {
         Awaitility.await().atMost(30, TimeUnit.SECONDS).until(() -> resultMap.size() == messageNum * 2);
     }
 
+    @Test
+    public void testDelayedRpcAt() throws Exception {
+        setupTopic("testDelayedRpcAt");
+        Map<String, Object> requestProducerConfigMap = new HashMap<>();
+        requestProducerConfigMap.put("producerName", "requestProducer");
+        requestProducerConfigMap.put("messageRoutingMode", MessageRoutingMode.RoundRobinPartition);
+
+        Map<String, AtomicInteger> resultMap = new ConcurrentHashMap<>();
+        final int ackNums = 2;
+
+        RequestCallBack<TestReply> callBack = new RequestCallBack<>() {
+            @Override
+            public void onSendRequestSuccess(String correlationId, MessageId messageId) {
+                log.info("<onSendRequestSuccess> CorrelationId[{}] Send request message success. MessageId: {}",
+                        correlationId, messageId);
+            }
+
+            @Override
+            public void onSendRequestError(String correlationId, Throwable t,
+                                           CompletableFuture<TestReply> replyFuture) {
+                log.warn("<onSendRequestError> CorrelationId[{}] Send request message failed. {}",
+                        correlationId, t.getMessage());
+                replyFuture.completeExceptionally(t);
+            }
+
+            @Override
+            public void onReplySuccess(String correlationId, String subscription,
+                                       TestReply value, CompletableFuture<TestReply> replyFuture) {
+                log.info("<onReplySuccess> CorrelationId[{}] Subscription[{}] Receive reply message success. Value: {}",
+                        correlationId, subscription, value);
+                if (resultMap.get(correlationId).getAndIncrement() == ackNums - 1) {
+                    rpcClient.removeRequest(correlationId);
+                }
+                replyFuture.complete(value);
+            }
+
+            @Override
+            public void onReplyError(String correlationId, String subscription,
+                                     String errorMessage, CompletableFuture<TestReply> replyFuture) {
+                log.warn("<onReplyError> CorrelationId[{}] Subscription[{}] Receive reply message failed. {}",
+                        correlationId, subscription, errorMessage);
+                replyFuture.completeExceptionally(new Exception(errorMessage));
+            }
+
+            @Override
+            public void onTimeout(String correlationId, Throwable t) {
+                log.warn("<onTimeout> CorrelationId[{}] Receive reply message timed out. {}",
+                        correlationId, t.getMessage());
+            }
+
+            @Override
+            public void onReplyMessageAckFailed(String correlationId, Consumer<TestReply> consumer,
+                                                Message<TestReply> msg, Throwable t) {
+                consumer.acknowledgeAsync(msg.getMessageId()).exceptionally(ex -> {
+                    log.warn("<onReplyMessageAckFailed> [{}] [{}] Acknowledging message {} failed again.",
+                            msg.getTopicName(), correlationId, msg.getMessageId(), ex);
+                    return null;
+                });
+            }
+        };
+
+        rpcClient = createPulsarRpcClient(pulsarClient, requestProducerConfigMap, null, callBack);
+
+        final int defaultEpoch = 1;
+        AtomicInteger epoch = new AtomicInteger(defaultEpoch);
+        // What do we do when we receive the request message
+        requestFunction = request -> {
+            epoch.getAndIncrement();
+            return CompletableFuture.completedFuture(new TestReply(request.value() + "-----------done"));
+        };
+        // If the server side is stateful, an error occurs after the server side executes 3-1, and a mechanism for
+        // checking and rolling back needs to be provided.
+        rollbackFunction = (id, request) -> {
+            if (epoch.get() != defaultEpoch) {
+                epoch.set(defaultEpoch);
+            }
+        };
+        PulsarRpcServer<TestRequest, TestReply> rpcServer1 = createPulsarRpcServer(pulsarClient, requestSubBase + "-1",
+                requestFunction, rollbackFunction, null);
+        PulsarRpcServer<TestRequest, TestReply> rpcServer2 = createPulsarRpcServer(pulsarClient, requestSubBase + "-2",
+                requestFunction, rollbackFunction, null);
+        PulsarRpcServer<TestRequest, TestReply> rpcServer3 = createPulsarRpcServer(pulsarClient, requestSubBase + "-3",
+                requestFunction, rollbackFunction, null);
+
+        long delayedTime = 5000;
+
+        Map<String, Object> requestMessageConfigMap = new HashMap<>();
+        requestMessageConfigMap.put(TypedMessageBuilder.CONF_DISABLE_REPLICATION, true);
+        for (int i = 0; i < messageNum; i++) {
+            String correlationId = correlationIdSupplier.get();
+            TestRequest message = new TestRequest(asynchronousMessage + i);
+            long eventTime = System.currentTimeMillis();
+            requestMessageConfigMap.put(TypedMessageBuilder.CONF_EVENT_TIME, eventTime);
+            resultMap.put(correlationId, new AtomicInteger());
+            rpcClient.requestAfterAsync(correlationId, message, requestMessageConfigMap,
+                    delayedTime, TimeUnit.MILLISECONDS);
+        }
+        long current = System.currentTimeMillis();
+
+        Awaitility.await().atMost(20, TimeUnit.SECONDS).until(() -> {
+            AtomicInteger success = new AtomicInteger();
+            resultMap.forEach((__, count) -> success.getAndAdd(count.get()));
+            if (System.currentTimeMillis() - current < delayedTime && success.get() > 0) {
+                return false;
+            }
+            return success.get() >= messageNum * ackNums && System.currentTimeMillis() - current >= delayedTime;
+        });
+        rpcServer1.close();
+        rpcServer2.close();
+        rpcServer3.close();
+    }
+
     private PulsarRpcClient<TestRequest, TestReply> createPulsarRpcClient(
             PulsarClient pulsarClient, Map<String, Object> requestProducerConfigMap,
             Pattern replyTopicsPattern, RequestCallBack<TestReply> callBack) throws PulsarRpcClientException {

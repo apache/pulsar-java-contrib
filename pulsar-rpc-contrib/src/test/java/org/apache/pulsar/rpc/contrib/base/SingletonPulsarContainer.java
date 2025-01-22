@@ -31,6 +31,7 @@ public class SingletonPulsarContainer {
     static {
         PULSAR_CONTAINER = new PulsarContainer(getPulsarImage())
                         .withEnv("PULSAR_PREFIX_acknowledgmentAtBatchIndexLevelEnabled", "true")
+                        .withEnv("PULSAR_PREFIX_delayedDeliveryEnabled", "true")
                         .withStartupTimeout(Duration.ofMinutes(3));
         PULSAR_CONTAINER.start();
     }
