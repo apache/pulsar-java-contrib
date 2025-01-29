@@ -14,6 +14,7 @@
 package org.apache.pulsar.rpc.contrib.server;
 
 import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
+import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_DELIVER_AT_TIME;
 import static org.apache.pulsar.rpc.contrib.common.Constants.SERVER_SUB;
 import java.util.function.BiConsumer;
 import lombok.AccessLevel;
@@ -50,8 +51,9 @@ class ReplySender<T, V> {
      * @param sub           The subscriber name involved in this interaction.
      */
     @SneakyThrows
-    void sendReply(String topic, String correlationId, V reply, T value, String sub) {
-        onSend(topic, correlationId, msg -> msg.value(reply), value, sub);
+    void sendReply(String topic, String correlationId, V reply, T value, String sub,
+                   long delayedAt) {
+        onSend(topic, correlationId, msg -> msg.value(reply), value, sub, delayedAt);
     }
 
     /**
@@ -64,8 +66,10 @@ class ReplySender<T, V> {
      * @param sub           The subscriber name involved in this interaction.
      */
     @SneakyThrows
-    void sendErrorReply(String topic, String correlationId, String errorMessage, T value, String sub) {
-        onSend(topic, correlationId, msg -> msg.property(ERROR_MESSAGE, errorMessage).value(null), value, sub);
+    void sendErrorReply(String topic, String correlationId, String errorMessage, T value, String sub,
+                        long delayedAt) {
+        onSend(topic, correlationId, msg -> msg.property(ERROR_MESSAGE, errorMessage).value(null),
+                value, sub, delayedAt);
     }
 
     /**
@@ -79,17 +83,17 @@ class ReplySender<T, V> {
      * @param sub           The subscriber name to be included in the message metadata.
      */
     @SneakyThrows
-    void onSend(String topic,
-                       String correlationId,
-                       java.util.function.Consumer<TypedMessageBuilder<V>> consumer,
-                       T value,
-                       String sub) {
+    void onSend(String topic, String correlationId, java.util.function.Consumer<TypedMessageBuilder<V>> consumer,
+                T value, String sub, long delayedAt) {
         log.debug("Sending {}", correlationId);
         Producer<V> producer = pool.borrowObject(topic);
         try {
             TypedMessageBuilder<V> builder = producer.newMessage()
                     .key(correlationId)
                     .property(SERVER_SUB, sub);
+            if (delayedAt > 0) {
+                builder.property(REQUEST_DELIVER_AT_TIME, String.valueOf(delayedAt));
+            }
             consumer.accept(builder);
             builder.sendAsync()
                     .exceptionally(e -> {
