@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
+import org.apache.pulsar.client.api.MessageIdAdv;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
@@ -92,8 +93,7 @@ public class PulsarPullConsumerTest {
     @Test(dataProvider = "testData")
     public void testPullConsumer(String topic, int partitionIndex) throws Exception {
         log.info("Starting testPullConsumer with topic: {}, partitionIndex: {}", topic, partitionIndex);
-        topic = partitionIndex == PulsarPullConsumer.PARTITION_NONE
-                ? nonPartitionedTopic : partitionedTopic + "-partition-" + partitionIndex;
+        topic = partitionIndex == PulsarPullConsumer.PARTITION_NONE ? topic : topic + "-partition-" + partitionIndex;
         String subscription = "my-subscription";
         String brokerCluster = "sit";
         PulsarPullConsumer<byte[]> pullConsumer = new PulsarPullConsumerImpl<>(topic, subscription,
@@ -144,5 +144,40 @@ public class PulsarPullConsumerTest {
         log.info("Final consume offset for non-partitioned topic: {}", offset);
         log.info("received {} unique messages from non-partitioned topic, it is equals to sent {}", received.size(),
                 received.equals(sent));
+        assert received.equals(sent) : "Received messages do not match sent messages";
+    }
+
+    @Test(dataProvider = "testData")
+    public void testSearchOffset(String topic, int partitionIndex) throws Exception {
+        topic = partitionIndex == PulsarPullConsumer.PARTITION_NONE ? topic : topic + "-partition-" + partitionIndex;
+        String subscription = "my-subscription";
+        String brokerCluster = "sit";
+        PulsarPullConsumer<byte[]> pullConsumer = new PulsarPullConsumerImpl<>(topic, subscription,
+                brokerCluster, Schema.BYTES, pulsarClient, pulsarAdmin);
+        pullConsumer.start();
+
+        Producer<byte[]> producer = pulsarClient
+                .newProducer(Schema.BYTES)
+                .topic(topic)
+                .enableBatching(false)
+                .create();
+
+        long timestamp = 0;
+        MessageIdAdv messageId = null;
+        for (int i = 0; i < 10; i++) {
+            String message = "Hello-Pulsar-" + i;
+            timestamp = System.currentTimeMillis();
+            messageId = (MessageIdAdv) producer.send(message.getBytes());
+        }
+        for (int i = 0; i < 10; i++) {
+            String message = "Hello-Pulsar-" + i;
+            producer.send(message.getBytes());
+            System.currentTimeMillis();
+        }
+        long offset = pullConsumer.searchOffset(partitionIndex, timestamp);
+        MessageIdAdv searchedMessageId = (MessageIdAdv) pulsarAdmin.topics().getMessageIdByIndex(topic, offset);
+        assert messageId.getEntryId() == searchedMessageId.getEntryId()
+                && messageId.getLedgerId() == searchedMessageId.getLedgerId() :
+                "Searched message ID does not match expected message ID";
     }
 }
