@@ -1,9 +1,9 @@
 package org.apache.pulsar.client.util;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ReaderCache provides thread-safe management of Pulsar Reader instances with:
+ * ReaderCache provides thread-safe management of Pulsar Reader instances with the following features.
  * - Partition-level locking for concurrent access
  * - LRU eviction with size-based and access-time-based policies
  * - Automatic resource cleanup
@@ -79,7 +79,9 @@ public class ReaderCache<T> {
                         .topic(partitionTopic)
                         .create();
             } catch (PulsarClientException e) {
-                if (++attempts >= MAX_RETRIES) throw e;
+                if (++attempts >= MAX_RETRIES) {
+                    throw e;
+                }
                 handleRetry(partitionTopic, offset, attempts, e);
             }
         }
@@ -155,9 +157,20 @@ public class ReaderCache<T> {
             this.stats = stats;
         }
 
-        public long hitCount() { return stats.hitCount(); }
-        public long missCount() { return stats.missCount(); }
-        public long loadSuccessCount() { return stats.loadSuccessCount(); }
-        public long loadFailureCount() { return stats.loadFailureCount(); }
+        public long hitCount() {
+            return stats.hitCount();
+        }
+
+        public long missCount() {
+            return stats.missCount();
+        }
+
+        public long loadSuccessCount() {
+            return stats.loadSuccessCount();
+        }
+
+        public long loadFailureCount() {
+            return stats.loadFailureCount();
+        }
     }
 }

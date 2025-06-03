@@ -11,7 +11,7 @@ import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.api.MessageId;
 
 /**
- * Cache for mapping offsets to MessageIds with the following features:
+ * Cache for mapping offsets to MessageIds with the following features.
  * - Per-partition caching with configurable size and expiration
  * - Thread-safe cache initialization and access
  * - Automatic cache cleanup
@@ -66,7 +66,7 @@ public class OffsetToMessageIdCache {
     }
 
     /**
-     * Cleans up all cached entries and releases resources
+     * Cleans up all cached entries and releases resources.
      */
     public void cleanup() {
         partitionCaches.values().forEach(cache -> {
@@ -77,7 +77,7 @@ public class OffsetToMessageIdCache {
     }
 
     /**
-     * Removes cache for specific partition topic
+     * Removes cache for specific partition topic.
      * @param partitionTopic topic partition to remove
      */
     public void removePartitionCache(String partitionTopic) {

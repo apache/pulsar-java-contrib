@@ -14,9 +14,9 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.MessageIdAdv;
-import org.apache.pulsar.client.api.PulsarPullConsumer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.PulsarPullConsumer;
 import org.apache.pulsar.client.api.Reader;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.impl.MessageIdImpl;
@@ -46,7 +46,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
 
     public PulsarPullConsumerImpl(String topic,
                                   String subscription,
-                                    String brokerCluster,
+                                  String brokerCluster,
                                   Schema<T> schema,
                                   PulsarClient client,
                                   PulsarAdmin admin) {
@@ -57,7 +57,8 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
         this.pulsarAdmin = Objects.requireNonNull(admin, "PulsarAdmin must not be null");
         this.consumerMap = new ConcurrentHashMap<>();
         this.offsetToMessageIdCache = OffsetToMessageIdCacheProvider.getOrCreateCache(admin, brokerCluster);
-        this.readerCache = ReaderCacheProvider.getOrCreateReaderCache(brokerCluster, schema, client, offsetToMessageIdCache);
+        this.readerCache =
+                ReaderCacheProvider.getOrCreateReaderCache(brokerCluster, schema, client, offsetToMessageIdCache);
     }
 
     @Override
@@ -108,7 +109,8 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
             return messages;
         } finally {
             if (reader != null) {
-                releaseReader(partitionTopic, reader, lastMessage != null ? lastMessage.getIndex().get() + 1 : request.getOffset());
+                releaseReader(partitionTopic, reader,
+                        lastMessage != null ? lastMessage.getIndex().get() + 1 : request.getOffset());
             }
         }
     }
@@ -132,7 +134,9 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
                         (int) Math.min(TimeUnit.NANOSECONDS.toMillis(remaining), DEFAULT_READ_TIMEOUT_MS),
                         TimeUnit.MILLISECONDS
                 );
-                if (msg == null) break;
+                if (msg == null) {
+                    break;
+                }
 
                 messages.add(msg);
                 totalBytes += msg.getData().length;
@@ -210,7 +214,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
     }
 
     private String buildPartitionTopic(String baseTopic, int partition) {
-        if  (partitionCount > 0 && partition >= partitionCount) {
+        if (partitionCount > 0 && partition >= partitionCount) {
             throw new IllegalArgumentException(String.format(
                     "Invalid partition %d for topic %s with %d partitions",
                     partition, baseTopic, partitionCount

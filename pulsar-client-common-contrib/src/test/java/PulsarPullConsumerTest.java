@@ -32,6 +32,7 @@ import org.testng.annotations.Test;
 
 @Slf4j
 public class PulsarPullConsumerTest {
+    // todo: We can not add a mock test before the https://github.com/apache/pulsar/pull/24220 is released
     String brokerUrl = "pulsar://127.0.0.1:6650";
     String serviceUrl = "http://127.0.0.1:8080";
 
