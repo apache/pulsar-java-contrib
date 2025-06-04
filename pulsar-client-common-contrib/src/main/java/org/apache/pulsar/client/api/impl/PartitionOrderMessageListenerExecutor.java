@@ -23,7 +23,7 @@ public class PartitionOrderMessageListenerExecutor implements MessageListenerExe
 
   public PartitionOrderMessageListenerExecutor(int numThreads, String subscriptionName) {
     this.executorProvider =
-        new ExecutorProvider(numThreads, subscriptionName + "listener-executor-");
+        new ExecutorProvider(numThreads, subscriptionName + "-listener-executor");
   }
 
   @Override
