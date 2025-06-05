@@ -24,7 +24,7 @@ public class KeySharedMessageListenerExecutor implements MessageListenerExecutor
 
   public KeySharedMessageListenerExecutor(int numThreads, String subscriptionName) {
     this.executorProvider =
-        new ExecutorProvider(numThreads, subscriptionName + "listener-executor-");
+        new ExecutorProvider(numThreads, subscriptionName + "-listener-executor");
   }
 
   @Override
