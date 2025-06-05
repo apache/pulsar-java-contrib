@@ -15,6 +15,7 @@
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.Message;
@@ -26,6 +27,10 @@ import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.PulsarPullConsumer;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.impl.PulsarPullConsumerImpl;
+import org.apache.pulsar.client.common.Constants;
+import org.apache.pulsar.client.common.ConsumeStats;
+import org.apache.pulsar.client.common.PullRequest;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -71,7 +76,7 @@ public class PulsarPullConsumerTest {
     @DataProvider(name = "testData")
     public Object[][] testData() {
         return new Object[][]{
-                {nonPartitionedTopic, PulsarPullConsumer.PARTITION_NONE},
+                {nonPartitionedTopic, Constants.PARTITION_NONE_INDEX},
                 {partitionedTopic, 0},
                 {partitionedTopic, 1}
         };
@@ -93,13 +98,15 @@ public class PulsarPullConsumerTest {
     @Test(dataProvider = "testData")
     public void testPullConsumer(String topic, int partitionIndex) throws Exception {
         log.info("Starting testPullConsumer with topic: {}, partitionIndex: {}", topic, partitionIndex);
-        topic = partitionIndex == PulsarPullConsumer.PARTITION_NONE ? topic : topic + "-partition-" + partitionIndex;
+        topic = partitionIndex == Constants.PARTITION_NONE_INDEX ? topic : topic + "-partition-" + partitionIndex;
         String subscription = "my-subscription";
         String brokerCluster = "sit";
+        @Cleanup
         PulsarPullConsumer<byte[]> pullConsumer = new PulsarPullConsumerImpl<>(topic, subscription,
                 brokerCluster, Schema.BYTES, pulsarClient, pulsarAdmin);
         pullConsumer.start();
 
+        @Cleanup
         Producer<byte[]> producer = pulsarClient
                 .newProducer(Schema.BYTES)
                 .topic(topic)
@@ -114,17 +121,18 @@ public class PulsarPullConsumerTest {
             log.info("Sent message: {} with id: {}", message, messageId);
         }
 
-        long offset = pullConsumer.getConsumeStats(partitionIndex);
+        ConsumeStats consumeStats = pullConsumer.getConsumeStats(partitionIndex);
+        long offset = consumeStats.getLastConsumedOffset();
         Set<String> received = new HashSet<>();
         while (true) {
             List<Message<byte[]>> messages = pullConsumer.pull(
-                    PulsarPullConsumer.PullRequest.builder()
+                    PullRequest.builder()
                             .offset(offset)
                             .partition(partitionIndex)
                             .maxMessages(10)
                             .maxBytes(1024 * 1024)
                             .timeout(java.time.Duration.ofSeconds(10))
-                            .build());
+                            .build()).getMessages();
             log.info("Pulled {} messages from topic {}", messages.size(), topic);
             if (messages.isEmpty()) {
                 log.info("No more messages to pull, exiting...");
@@ -140,7 +148,7 @@ public class PulsarPullConsumerTest {
             offset = consumedIndex + 1;
             log.info("Acknowledged messages up to index: {}", consumedIndex);
         }
-        offset = pullConsumer.getConsumeStats(partitionIndex);
+        offset = pullConsumer.getConsumeStats(partitionIndex).getLastConsumedOffset();
         log.info("Final consume offset for non-partitioned topic: {}", offset);
         log.info("received {} unique messages from non-partitioned topic, it is equals to sent {}", received.size(),
                 received.equals(sent));
@@ -149,13 +157,15 @@ public class PulsarPullConsumerTest {
 
     @Test(dataProvider = "testData")
     public void testSearchOffset(String topic, int partitionIndex) throws Exception {
-        topic = partitionIndex == PulsarPullConsumer.PARTITION_NONE ? topic : topic + "-partition-" + partitionIndex;
+        topic = partitionIndex == Constants.PARTITION_NONE_INDEX ? topic : topic + "-partition-" + partitionIndex;
         String subscription = "my-subscription";
         String brokerCluster = "sit";
+        @Cleanup
         PulsarPullConsumer<byte[]> pullConsumer = new PulsarPullConsumerImpl<>(topic, subscription,
                 brokerCluster, Schema.BYTES, pulsarClient, pulsarAdmin);
         pullConsumer.start();
 
+        @Cleanup
         Producer<byte[]> producer = pulsarClient
                 .newProducer(Schema.BYTES)
                 .topic(topic)
@@ -179,5 +189,45 @@ public class PulsarPullConsumerTest {
         assert messageId.getEntryId() == searchedMessageId.getEntryId()
                 && messageId.getLedgerId() == searchedMessageId.getLedgerId() :
                 "Searched message ID does not match expected message ID";
+    }
+
+    @Test
+    public void testGetConsumeStats() {
+        try {
+            String subscription = "test-subscription";
+            String brokerCluster = "sit";
+            @Cleanup
+            PulsarPullConsumer<byte[]> pullConsumer = new PulsarPullConsumerImpl<>(nonPartitionedTopic, subscription,
+                    brokerCluster, Schema.BYTES, pulsarClient, pulsarAdmin);
+            pullConsumer.start();
+
+            @Cleanup
+            Producer<byte[]> producer = pulsarClient
+                    .newProducer(Schema.BYTES)
+                    .topic(nonPartitionedTopic)
+                    .enableBatching(false)
+                    .create();
+
+            for (int i = 0; i < 10; i++) {
+                String message = "Hello-Pulsar-" + i;
+                producer.send(message.getBytes());
+            }
+
+            ConsumeStats offset = pullConsumer.getConsumeStats(Constants.PARTITION_NONE_INDEX);
+            log.info("Initial consume offset for topic {}: {}", nonPartitionedTopic, offset);
+            Assert.assertEquals(offset.getLastConsumedOffset(), -1L);
+            Assert.assertEquals(offset.getMaxOffset(), 9L);
+            Assert.assertEquals(offset.getMinOffset(), -1L);
+            // Simulate some message processing
+            pullConsumer.ack(offset.getLastConsumedOffset() + 10, Constants.PARTITION_NONE_INDEX);
+            Thread.sleep(1000);
+            ConsumeStats newOffset = pullConsumer.getConsumeStats(Constants.PARTITION_NONE_INDEX);
+            Assert.assertEquals(newOffset.getLastConsumedOffset(), 9L);
+            Assert.assertEquals(newOffset.getMaxOffset(), 9L);
+            Assert.assertEquals(newOffset.getMinOffset(), -1L);
+            log.info("New consume offset after ack: {}", newOffset);
+        } catch (Exception e) {
+            log.error("Error during testExamineConsumeStats", e);
+        }
     }
 }

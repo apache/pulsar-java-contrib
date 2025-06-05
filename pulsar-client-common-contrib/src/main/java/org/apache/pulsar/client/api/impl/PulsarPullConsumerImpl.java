@@ -26,15 +26,17 @@ import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
-import org.apache.pulsar.client.api.MessageIdAdv;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.PulsarPullConsumer;
 import org.apache.pulsar.client.api.Reader;
 import org.apache.pulsar.client.api.Schema;
-import org.apache.pulsar.client.impl.MessageIdImpl;
+import org.apache.pulsar.client.common.ConsumeStats;
+import org.apache.pulsar.client.common.PullRequest;
+import org.apache.pulsar.client.common.PullResponse;
 import org.apache.pulsar.client.util.OffsetToMessageIdCache;
 import org.apache.pulsar.client.util.OffsetToMessageIdCacheProvider;
+import org.apache.pulsar.client.util.PulsarAdminUtils;
 import org.apache.pulsar.client.util.ReaderCache;
 import org.apache.pulsar.client.util.ReaderCacheProvider;
 import org.apache.pulsar.common.partition.PartitionedTopicMetadata;
@@ -48,6 +50,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
 
     private final String topic;
     private final String subscription;
+    private final String brokerCluster;
     private final Schema<T> schema;
     private final Map<String, Consumer<T>> consumerMap;
     private final OffsetToMessageIdCache offsetToMessageIdCache;
@@ -65,6 +68,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
                                   PulsarAdmin admin) {
         this.topic = Objects.requireNonNull(topic, "Topic must not be null");
         this.subscription = Objects.requireNonNull(subscription, "Subscription must not be null");
+        this.brokerCluster = Objects.requireNonNull(brokerCluster, "Broker cluster must not be null");
         this.schema = Objects.requireNonNull(schema, "Schema must not be null");
         this.pulsarClient = Objects.requireNonNull(client, "PulsarClient must not be null");
         this.pulsarAdmin = Objects.requireNonNull(admin, "PulsarAdmin must not be null");
@@ -108,7 +112,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
     }
 
     @Override
-    public List<Message<T>> pull(PullRequest request) {
+    public PullResponse<T> pull(PullRequest request) {
         validatePullParameters(request.getMaxMessages(), request.getMaxBytes());
 
         String partitionTopic = buildPartitionTopic(topic, request.getPartition());
@@ -119,7 +123,10 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
             List<Message<T>> messages = readMessages(reader, request.getMaxMessages(), request.getMaxBytes(),
                     request.getTimeout());
             lastMessage = messages.isEmpty() ? null : messages.get(messages.size() - 1);
-            return messages;
+            return new PullResponse<>(reader.hasMessageAvailable(), messages);
+        } catch (PulsarClientException e) {
+            log.error("Failed to pull messages from topic {} at offset {}", partitionTopic, request.getOffset(), e);
+            return new PullResponse<>(false, Collections.emptyList());
         } finally {
             if (reader != null) {
                 releaseReader(partitionTopic, reader,
@@ -179,21 +186,13 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
     @Override
     public long searchOffset(int partition, long timestamp) throws PulsarAdminException {
         String partitionTopic = buildPartitionTopic(topic, partition);
-        MessageIdAdv messageId = (MessageIdAdv) pulsarAdmin.topics().getMessageIdByTimestamp(partitionTopic, timestamp);
-        return extractMessageIndex(partitionTopic, messageId);
+        return PulsarAdminUtils.searchOffset(partitionTopic, timestamp, brokerCluster, pulsarAdmin);
     }
 
     @Override
-    public long getConsumeStats(int partition) throws PulsarAdminException {
-        String partitionTopic;
-        MessageIdAdv messageIdAdv;
-        partitionTopic = buildPartitionTopic(topic, partition);
-        messageIdAdv = parseMessageIdFromString(pulsarAdmin.topics()
-                .getInternalStats(topic)
-                .cursors
-                .get(subscription)
-                .markDeletePosition, partition);
-        return messageIdAdv.getEntryId() < 0 ? -1L : processMessageId(partitionTopic, messageIdAdv);
+    public ConsumeStats getConsumeStats(int partition) throws PulsarAdminException {
+        String partitionTopic = buildPartitionTopic(topic, partition);
+        return PulsarAdminUtils.getConsumeStats(partitionTopic, partition, subscription, brokerCluster, pulsarAdmin);
     }
 
     @Override
@@ -234,55 +233,6 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
             ));
         }
         return partitionCount == 0 ? baseTopic : baseTopic + PARTITION_SPLICER + partition;
-    }
-
-    // Common message processing logic
-    private long extractMessageIndex(String topic, MessageIdAdv messageId) throws PulsarAdminException {
-        List<Message<byte[]>> messages = pulsarAdmin.topics()
-                .getMessagesById(topic, messageId.getLedgerId(), messageId.getEntryId());
-
-        if (messages == null || messages.isEmpty()) {
-            throw new PulsarAdminException("No messages found for " + messageId);
-        }
-
-        return messages.stream()
-                .map(Message::getIndex)
-                .filter(opt -> opt.isPresent())
-                .mapToLong(opt -> {
-                    long index = opt.get();
-                    offsetToMessageIdCache.putMessageIdByOffset(topic, index, messageId);
-                    return index;
-                })
-                .findFirst()
-                .orElseThrow(() -> new PulsarAdminException("Missing message index in " + messageId));
-    }
-
-    private void validateMessageIdFormat(String messageIdStr) throws PulsarAdminException {
-        if (!messageIdStr.contains(":")) {
-            throw new PulsarAdminException("Invalid message ID format: " + messageIdStr);
-        }
-    }
-
-    private long processMessageId(String topic, MessageIdAdv messageId) throws PulsarAdminException {
-        try {
-            return extractMessageIndex(topic, messageId);
-        } catch (NumberFormatException e) {
-            throw new PulsarAdminException("Invalid ID components: " + messageId, e);
-        }
-    }
-
-    private MessageIdAdv parseMessageIdFromString(String messageIdStr, int partition) throws PulsarAdminException {
-        String[] parts = messageIdStr.split(":");
-        if (parts.length < 2) {
-            throw new PulsarAdminException("Invalid message ID format: " + messageIdStr);
-        }
-        try {
-            long ledgerId = Long.parseLong(parts[0]);
-            long entryId = Long.parseLong(parts[1]);
-            return new MessageIdImpl(ledgerId, entryId, partition);
-        } catch (NumberFormatException e) {
-            throw new PulsarAdminException("Invalid message ID components: " + messageIdStr, e);
-        }
     }
 
     private void releaseReader(String topicPartition, Reader<T> reader, long nextOffset) {
