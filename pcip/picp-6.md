@@ -68,14 +68,14 @@ MCP executes the tool and returns a structured result, which the LLM then summar
 ### Package structure:
 ```java
 pulsar-java-contrib/
-	├── MCPProtocol.java           # MCP 协议接口
-	├── MCPFactory.java            # 工厂类，动态加载协议实例
-	├── tools/                     # 工具注册与具体实现
-	├── client/                    # 管理 PulsarAdmin 客户端
-	├── context/                   # 会话状态管理
-	├── validation/                # 参数验证机制
-	├── transport/                 # 支持 HTTP、STDIO、SSE
-	├── model/                     # ToolSchema、ToolResult 等核心数据结构
+	├── MCPProtocol.java           # MCP protocol interface
+	├── MCPFactory.java            # Factory class for dynamically loading protocol instances
+	├── tools/                     # Tool registration and concrete implementations
+	├── client/                    # PulsarAdmin client management
+	├── context/                   # Session state management
+	├── validation/                # Parameter validation mechanism
+	├── transport/                 # Support for HTTP, STDIO,SSE
+	├── model/                     # Data structures like ToolSchema, ToolResult, etc
 ```
 
 ### Key components:
