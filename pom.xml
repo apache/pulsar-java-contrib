@@ -63,6 +63,7 @@
         <module>pulsar-metrics-contrib</module>
         <module>pulsar-auth-contrib</module>
         <module>pulsar-rpc-contrib</module>
+        <module>pulsar-admin-mcp-contrib</module>
     </modules>
 
     <dependencyManagement>
@@ -231,7 +232,7 @@
                 <artifactId>license-maven-plugin</artifactId>
                 <version>${license-maven-plugin.version}</version>
                 <configuration>
-                    <header>etc/APACHE-2.txt</header>
+                    <header>E:/pulsar-java-contrib/etc/APACHE-2.txt</header>
                     <excludes>
                         <exclude>LICENSE</exclude>
                         <exclude>NOTICE</exclude>

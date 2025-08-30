@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<licensePluginReport goal="CHECK" timestamp="1756547488113">
+    <module artifactId="mcp-contrib" groupId="org.apache" version="1.0.0-SNAPSHOT"/>
+    <files>
+        <file path="pom.xml" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\Main.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\client\PulsarClientManager.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\client\package-info.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\config\PulsarMCPCliOptions.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\config\package-info.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\package-info.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\BasePulsarTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\ClusterTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\MessageTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\MonitoringTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\NamespaceTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\SchemaTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\SubscriptionTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\TenantTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\TopicTools.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\package-info.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\AbstractMCPServer.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\HttpSseMCPServer.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\StdioMCPServer.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\Transport.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\TransportLauncher.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\TransportManager.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\package-info.java" result="PRESENT"/>
+        <file path="src\main\resources\application.yml" result="PRESENT"/>
+    </files>
+</licensePluginReport>
