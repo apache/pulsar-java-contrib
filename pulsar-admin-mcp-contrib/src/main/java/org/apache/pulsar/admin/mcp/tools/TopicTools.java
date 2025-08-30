@@ -62,8 +62,7 @@ public class TopicTools extends BasePulsarTools {
                                 },
                                 "namespace": {
                                     "type": "string",
-                                    "description": "Full namespace in format 'tenant/namespace'
-                                                    (alternative to separate tenant/namespaceName)"
+                                    "description": "Namespace in 'tenant/namespace' format"
                                 }
                             },
                             "required": []
@@ -110,8 +109,7 @@ public class TopicTools extends BasePulsarTools {
                                 },
                                 "topicName": {
                                     "type": "string",
-                                    "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                                    "description": "Topic name(simple:orders/full:persistent://public/default/orders)",
                                     "items": {
                                         "type": "string"
                                     },
@@ -183,8 +181,7 @@ public class TopicTools extends BasePulsarTools {
                         },
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')",
                             "items": {
                                 "type": "string"
                             },
@@ -243,8 +240,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
                     "required": ["topicName"]
@@ -291,8 +287,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
                     "required": ["topicName"]
@@ -333,8 +328,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple: 'orders' or full: 'persistent://public/default/orders')"
                         },
                         "partitions": {
                             "type": "integer",
@@ -412,8 +406,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
                     "required": ["topicName"]
@@ -455,8 +448,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
                     "required": ["topicName"]
@@ -499,9 +491,8 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
-                        }
+                           "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
+                       }
                     },
                     "required": ["topicName"]
                 }
@@ -564,9 +555,8 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
-                        },
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
+                         },
                         "expireTimeInSeconds": {
                             "type": "integer",
                             "description": "Messages older than this number of seconds will be marked as expired",
@@ -624,8 +614,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         },
                         "subscription": {
                             "type": "string",
@@ -682,8 +671,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         },
                         "subscription": {
                             "type": "string",
@@ -742,9 +730,8 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
-                        },
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
+                        }
                     },
                     "required": ["topic"]
                 }
@@ -816,8 +803,7 @@ public class TopicTools extends BasePulsarTools {
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
                     "required": ["topic"]

@@ -102,15 +102,14 @@ public class SchemaTools extends BasePulsarTools{
                 "Get schema all versions",
                 """
                 {
-                    "type": "object",
-                    "properties": {
-                        "topicName": {
-                            "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
-                        },
-                    },
-                    "required": ["topicName"]
+                  "type": "object",
+                  "properties": {
+                    "topicName": {
+                      "type": "string",
+                      "description": "Topic name (simple: 'orders', full: 'persistent://public/default/orders')"
+                    }
+                  },
+                  "required": ["topicName"]
                 }
                 """
         );
@@ -160,8 +159,7 @@ public class SchemaTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            ""description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
                         "versionIndex": {
                             "type": "integer",
@@ -222,8 +220,7 @@ public class SchemaTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
                         "schema": {
                             "type": "string",
@@ -298,8 +295,7 @@ public class SchemaTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            ""description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
                         "force": {
                             "type": "boolean",
@@ -350,8 +346,7 @@ public class SchemaTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
                         "schema": {
                             "type": "string",

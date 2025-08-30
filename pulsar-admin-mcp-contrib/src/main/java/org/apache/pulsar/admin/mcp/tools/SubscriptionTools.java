@@ -53,8 +53,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         }
                     },
                     "required": ["topic"]
@@ -97,8 +96,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscription": {
                             "type": "string",
@@ -161,8 +159,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscription": {
                             "type": "string",
@@ -224,8 +221,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscription": {
                             "type": "string",
@@ -274,8 +270,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscription": {
                             "type": "string",
@@ -332,8 +327,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscriptionName": {
                             "type": "string",
@@ -341,8 +335,7 @@ public class SubscriptionTools extends BasePulsarTools{
                         },
                         "timestamp": {
                             "type": "integer",
-                            "description": "The timestamp (in milliseconds since epoch)"
-                                            + "to reset the subscription cursor to",
+                            "description": "Timestamp (ms since epoch) to reset the subscription cursor",
                             "default": 0
                         }
                     },
@@ -394,8 +387,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscriptionName": {
                             "type": "string",
@@ -457,8 +449,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscriptionName": {
                             "type": "string",
@@ -507,8 +498,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscriptionName": {
                             "type": "string",
@@ -557,8 +547,7 @@ public class SubscriptionTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "subscriptionName": {
                             "type": "string",
