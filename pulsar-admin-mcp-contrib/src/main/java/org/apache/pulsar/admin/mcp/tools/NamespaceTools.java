@@ -405,10 +405,8 @@ public class NamespaceTools extends BasePulsarTools {
                         },
                         "policy": {
                             "type": "string",
-                            "description": "Backlog quota policy:
-                                            producer_request_hold, producer_exception,
-                                            or consumer_backlog_eviction"
-                        }
+                            "description": "policy: producer_request_hold, producer_exception, or consumer_eviction"
+                       }
                     },
                     "required": ["tenant", "namespace", "limitSizeInBytes", "policy"]
                 }

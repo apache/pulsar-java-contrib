@@ -75,8 +75,7 @@ public class MonitoringTools extends BasePulsarTools{
                         },
                         "maxTopics": {
                             "type": "integer",
-                            "description": "Maximum number of top topics"
-                                            + "to include when includeTopicStats is true (default: 10)",
+                            "description": "Maximum top topics to include when includeTopicStats is true (default: 10)",
                             "default": 10,
                             "minimum": 1,
                             "maximum": 50
@@ -145,9 +144,8 @@ public class MonitoringTools extends BasePulsarTools{
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
-                        },
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
+                       },
                         "includeDetails": {
                             "type": "boolean",
                             "description": "Include detailed subscription and consumer statistics (default: false)",
@@ -316,9 +314,8 @@ public class MonitoringTools extends BasePulsarTools{
                     "properties": {
                         "topicName": {
                             "type": "string",
-                            "description": "Topic name (can be simple name like 'orders' or"
-                                            + "full name like 'persistent://public/default/orders')"
-                        },
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
+                       },
                         "subscriptionName": {
                             "type": "string",
                             "description": "Name of the subscription to monitor"
