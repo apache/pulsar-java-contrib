@@ -46,9 +46,7 @@ public class TransportManager {
             throw new IllegalArgumentException("Transport not registered: " + type);
         }
 
-//        logger.info("Starting transport for type {}", type.getDescription());
         transport.start(options);
-//        logger.info("{} transport started successfully", type.getDescription());
     }
 
     public void startAllTransports(PulsarMCPCliOptions  options) throws Exception {

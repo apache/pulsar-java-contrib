@@ -15,7 +15,7 @@ E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\
 E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\tools\TenantTools.java
 E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\tools\TopicTools.java
 E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\transport\AbstractMCPServer.java
-E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\transport\HttpSseMCPServer.java
+E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\transport\HttpMCPServer.java
 E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\transport\package-info.java
 E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\transport\StdioMCPServer.java
 E:\pulsar-java-contrib\pulsar-admin-mcp-contrib\src\main\java\org\apache\pulsar\admin\mcp\transport\Transport.java

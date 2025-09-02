@@ -150,7 +150,7 @@ public abstract class BasePulsarTools {
 
 
     protected String buildFullTopicName(Map<String, Object> arguments) {
-        String topicName = getStringParam(arguments, "topicName");
+        String topicName = getStringParam(arguments, "topic");
         if (topicName != null && !topicName.isBlank()) {
             if (topicName.startsWith("persistent://") || topicName.startsWith("non-persistent://")) {
                 return topicName.trim();
@@ -163,6 +163,25 @@ public abstract class BasePulsarTools {
 
         String prefix = persistent ? "persistent://" : "non-persistent://";
         return prefix + tenant + "/" + namespace + "/" + topicName;
+    }
+
+    protected String resolveNamespace(Map<String, Object> arguments) {
+        String tenant = getStringParam(arguments, "tenant");
+        String namespace = getStringParam(arguments, "namespace");
+
+        if (namespace != null && namespace.contains("/")) {
+            return namespace;
+        }
+
+        if (tenant == null) {
+            tenant = "public";
+        }
+
+        if (namespace == null) {
+            namespace = "default";
+        }
+
+        return tenant + "/" + namespace;
     }
 
     protected void addTopicBreakdown(Map<String, Object> result, String fullTopicName) {
@@ -181,10 +200,5 @@ public abstract class BasePulsarTools {
         result.put("namespace", parts[1]);
         result.put("topicName", parts[2]);
     }
-
-
-//    protected String resolveNamespace(Map<String, Object> arguments) {
-//
-//    }
 
 }

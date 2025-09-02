@@ -173,7 +173,7 @@ public class MonitoringTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         boolean includeDetails = getBooleanParam(request.arguments(),
                                 "includeDetails", false);
                         boolean includeInternalStats = getBooleanParam(request.arguments(),
@@ -183,10 +183,10 @@ public class MonitoringTools extends BasePulsarTools{
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("timestamp", System.currentTimeMillis());
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
 
                         try {
-                            var stats = pulsarAdmin.topics().getStats(topicName);
+                            var stats = pulsarAdmin.topics().getStats(topic);
 
                             result.put("msgRateIn", stats.getMsgRateIn());
                             result.put("msgRateOut", stats.getMsgRateOut());
@@ -254,7 +254,7 @@ public class MonitoringTools extends BasePulsarTools{
 
                             if (includeInternalStats) {
                                 try {
-                                    var internalStats = pulsarAdmin.topics().getInternalStats(topicName);
+                                    var internalStats = pulsarAdmin.topics().getInternalStats(topic);
                                     Map<String, Object> internal = new HashMap<>();
                                     internal.put("numberOfEntries", internalStats.numberOfEntries);
                                     internal.put("totalSize", internalStats.totalSize);
@@ -294,7 +294,7 @@ public class MonitoringTools extends BasePulsarTools{
                         }
                         result.put("topicHealth", topicHealth);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
                         return createSuccessResult("Topic performance monitoring completed", result);
 
                     } catch (Exception e) {
@@ -312,7 +312,7 @@ public class MonitoringTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                        },
@@ -321,7 +321,7 @@ public class MonitoringTools extends BasePulsarTools{
                             "description": "Name of the subscription to monitor"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -330,10 +330,10 @@ public class MonitoringTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topicName);
+                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
                         var subStats = stats.getSubscriptions().get(subscriptionName);
 
                         if (subStats == null) {
@@ -341,7 +341,7 @@ public class MonitoringTools extends BasePulsarTools{
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("timestamp", System.currentTimeMillis());
 
@@ -353,7 +353,7 @@ public class MonitoringTools extends BasePulsarTools{
                         result.put("subscriptionType", subStats.getType());
 
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
                         return createSuccessResult("Subscription performance retrieved", result);
 
                     } catch (IllegalArgumentException e) {
@@ -615,13 +615,13 @@ public class MonitoringTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name to check (optional)"
                         },
                         "subscriptionName": {
                             "type": "string",
-                            "description": "Subscription name to check (optional, requires topicName)"
+                            "description": "Subscription name to check (optional, requires topic)"
                         }
                     }
                 }
@@ -643,12 +643,12 @@ public class MonitoringTools extends BasePulsarTools{
                         }
 
                         // 2. Optional topic check
-                        String topicName = getStringParam(request.arguments(), "topicName");
+                        String topic = getStringParam(request.arguments(), "topic");
                         String subscriptionName = getStringParam(request.arguments(), "subscriptionName");
 
-                        if (topicName != null && !topicName.isEmpty()) {
-                            topicName = buildFullTopicName(request.arguments());
-                            TopicStats stats = pulsarAdmin.topics().getStats(topicName);
+                        if (topic != null && !topic.isEmpty()) {
+                            topic = buildFullTopicName(request.arguments());
+                            TopicStats stats = pulsarAdmin.topics().getStats(topic);
 
                             long totalBytesIn = stats.getBytesInCounter();
                             long totalBytesOut = stats.getBytesOutCounter();
@@ -658,7 +658,7 @@ public class MonitoringTools extends BasePulsarTools{
                             double throughputMBps = (totalBytesIn + totalBytesOut) / (1024.0 * 1024.0);
                             double messagesPerSecond = totalMsgsIn + totalMsgsOut; // 这里假设采集周期为1秒
 
-                            result.put("topicName", topicName);
+                            result.put("topic", topic);
                             result.put("throughputMBps", throughputMBps);
                             result.put("messagesPerSecond", messagesPerSecond);
 
@@ -694,7 +694,7 @@ public class MonitoringTools extends BasePulsarTools{
                                     && !"HIGH".equals(backlogLevel);
                             result.put("isHealthy", isHealthy);
 
-                            addTopicBreakdown(result, topicName);
+                            addTopicBreakdown(result, topic);
                         }
 
                         return createSuccessResult("Health check completed", result);

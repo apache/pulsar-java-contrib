@@ -1,5 +1,6 @@
 org\apache\pulsar\admin\mcp\Main.class
 org\apache\pulsar\admin\mcp\transport\StdioMCPServer.class
+org\apache\pulsar\admin\mcp\transport\HttpMCPServer.class
 org\apache\pulsar\admin\mcp\client\PulsarClientManager.class
 org\apache\pulsar\admin\mcp\transport\AbstractMCPServer.class
 org\apache\pulsar\admin\mcp\package-info.class
@@ -11,7 +12,6 @@ org\apache\pulsar\admin\mcp\transport\TransportManager.class
 org\apache\pulsar\admin\mcp\tools\NamespaceTools.class
 org\apache\pulsar\admin\mcp\transport\TransportLauncher.class
 org\apache\pulsar\admin\mcp\config\PulsarMCPCliOptions$TransportType.class
-org\apache\pulsar\admin\mcp\transport\HttpSseMCPServer.class
 org\apache\pulsar\admin\mcp\config\PulsarMCPCliOptions.class
 org\apache\pulsar\admin\mcp\config\package-info.class
 org\apache\pulsar\admin\mcp\transport\TransportLauncher$1.class
