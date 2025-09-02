@@ -65,16 +65,16 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        List<String> subscriptions = pulsarAdmin.topics().getSubscriptions(topicName);
+                        List<String> subscriptions = pulsarAdmin.topics().getSubscriptions(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptions", subscriptions);
                         result.put("subscriptionCount", subscriptions.size());
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscriptions listed successfully", result);
 
@@ -112,10 +112,10 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topicName);
+                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
                         SubscriptionStats subStats = stats.getSubscriptions().get(subscription);
 
                         if (subStats == null) {
@@ -123,7 +123,7 @@ public class SubscriptionTools extends BasePulsarTools{
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("subscription", subscription);
                         result.put("msgBacklog", subStats.getMsgBacklog());
                         result.put("msgRateOut", subStats.getMsgRateOut());
@@ -137,7 +137,7 @@ public class SubscriptionTools extends BasePulsarTools{
                                         : 0);
                         result.put("isReplicated", subStats.isReplicated());
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription stats fetched successfully", result);
 
@@ -180,25 +180,25 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         String messageId = getStringParam(request.arguments(), "messageId");
 
                         if (messageId == null || messageId.equals("latest")) {
-                            pulsarAdmin.topics().createSubscription(topicName, subscription, MessageId.latest);
+                            pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
                         } else if (messageId.equals("earliest")) {
-                            pulsarAdmin.topics().createSubscription(topicName, subscription, MessageId.earliest);
+                            pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.earliest);
                         } else {
-                            pulsarAdmin.topics().createSubscription(topicName, subscription, MessageId.latest);
+                            pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("subscription", subscription);
                         result.put("messageId", messageId != null ? messageId : "latest");
                         result.put("created", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription created successfully", result);
 
@@ -237,19 +237,19 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         Boolean force =  getBooleanParam(request.arguments(), "force", false);
 
-                        pulsarAdmin.topics().deleteSubscription(topicName, subscription);
+                        pulsarAdmin.topics().deleteSubscription(topic, subscription);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("subscription", subscription);
                         result.put("force", force);
                         result.put("deleted", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription deleted successfully", result);
 
@@ -291,7 +291,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         int numMessages = getIntParam(request.arguments(), "numMessages", 1);
 
@@ -299,14 +299,14 @@ public class SubscriptionTools extends BasePulsarTools{
                             return createErrorResult("Number of messages must be greater than 0.");
                         }
 
-                        pulsarAdmin.topics().skipMessages(topicName, subscription, numMessages);
+                        pulsarAdmin.topics().skipMessages(topic, subscription, numMessages);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("subscription", subscription);
                         result.put("numMessagesSkipped", numMessages);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Skipped messages successfully", result);
 
@@ -325,7 +325,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
@@ -339,7 +339,7 @@ public class SubscriptionTools extends BasePulsarTools{
                             "default": 0
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -348,7 +348,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
                         Long timestamp = getLongParam(request.arguments(), "timestamp", 0L);
 
@@ -356,15 +356,15 @@ public class SubscriptionTools extends BasePulsarTools{
                             timestamp = System.currentTimeMillis() - (365L * 24 * 60 * 1000);
                         }
 
-                        pulsarAdmin.topics().resetCursor(topicName, subscriptionName, timestamp);
+                        pulsarAdmin.topics().resetCursor(topic, subscriptionName, timestamp);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("timestamp", timestamp);
                         result.put("reset", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription cursor reset successfully", result);
 
@@ -385,7 +385,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
@@ -399,7 +399,7 @@ public class SubscriptionTools extends BasePulsarTools{
                             "default": "0"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -408,15 +408,15 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
                         Integer expireTimeSeconds = getIntParam(request.arguments(), "expireTimeSeconds", 0);
 
-                        pulsarAdmin.topics().expireMessages(topicName, subscriptionName, expireTimeSeconds);
+                        pulsarAdmin.topics().expireMessages(topic, subscriptionName, expireTimeSeconds);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName",
-                                topicName);
+                        result.put("topic",
+                                topic);
                         result.put("subscriptionName",
                                 subscriptionName);
                         result.put("expireTimeSeconds",
@@ -424,7 +424,7 @@ public class SubscriptionTools extends BasePulsarTools{
                         result.put("expired",
                                 true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult(
                                 "Expired subscription messages up to message ID successfully"
@@ -447,7 +447,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
@@ -456,7 +456,7 @@ public class SubscriptionTools extends BasePulsarTools{
                             "description": "The name of the subscription to unsubscribe"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -465,17 +465,17 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-                        pulsarAdmin.topics().deleteSubscription(topicName, subscriptionName);
+                        pulsarAdmin.topics().deleteSubscription(topic, subscriptionName);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("unsubscribed", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription unsubscribed successfully", result);
 
@@ -496,7 +496,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
@@ -505,7 +505,7 @@ public class SubscriptionTools extends BasePulsarTools{
                             "description": "The name of the subscription to pause"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -514,17 +514,15 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-//                        pulsarAdmin.topics().getPauseSubscription(topicName, subscriptionName);
-
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("paused", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription paused successfully", result);
 
@@ -545,7 +543,7 @@ public class SubscriptionTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
@@ -554,7 +552,7 @@ public class SubscriptionTools extends BasePulsarTools{
                             "description": "The name of the subscription to resume"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -563,17 +561,17 @@ public class SubscriptionTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-//                        pulsarAdmin.topics().resumeSubscription(topicName, subscriptionName);
+//                        pulsarAdmin.topics().resumeSubscription(topic, subscriptionName);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("resumed", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Subscription resumed successfully", result);
 

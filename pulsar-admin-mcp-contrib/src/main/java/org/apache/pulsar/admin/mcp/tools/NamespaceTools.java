@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.common.policies.data.BacklogQuota;
-import org.apache.pulsar.common.policies.data.Policies;
 import org.apache.pulsar.common.policies.data.RetentionPolicies;
 
 public class NamespaceTools extends BasePulsarTools {
@@ -105,14 +104,16 @@ public class NamespaceTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "tenant": {
-                            "type": "string",
-                            "description": "The tenant name"
-                        },
-                        "namespace": {
-                            "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
-                        }
+                         "tenant": {
+                              "type": "string",
+                              "description": "Tenant name (default: 'public')",
+                              "default": "public"
+                          },
+                          "namespace": {
+                              "type": "string",
+                              "description": "Namespace name or full path ('orders' or 'public/orders')",
+                              "default": "default"
+                          }
                     },
                     "required": ["tenant", "namespace"]
                 }
@@ -123,11 +124,7 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getStringParam(request.arguments(), "tenant");
-                        String namespace = getStringParam(request.arguments(), "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
-
-                        Policies policies = pulsarAdmin.namespaces().getPolicies(fullNamespace);
+                        String fullNamespace = resolveNamespace(request.arguments());
 
                         Map<String, Object> details = new HashMap<>();
                         details.put("policies", pulsarAdmin.namespaces().getPolicies(fullNamespace));
@@ -162,14 +159,16 @@ public class NamespaceTools extends BasePulsarTools {
                     "properties": {
                         "tenant": {
                             "type": "string",
-                            "description": "The tenant name"
+                            "description": "Tenant name (default: 'public')",
+                            "default": "public"
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         }
                     },
-                    "required": ["tenant", "namespace"]
+                    "required": ["namespace"]
                 }
                 """
         );
@@ -178,28 +177,23 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
+                        String fullNamespace = resolveNamespace(request.arguments());
 
-                        try {
-                            pulsarAdmin.namespaces().createNamespace(fullNamespace);
-                            return createSuccessResult("Namespace created successfully", Map.of(
-                                    "tenant", tenant,
-                                    "namespace", namespace
-                            ));
-                        } catch (Exception e) {
+                        pulsarAdmin.namespaces().createNamespace(fullNamespace);
 
-                        }
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
 
-                        Map<String, Object> properties = new HashMap<>();
-                        properties.put("tenant", tenant);
-                        properties.put("namespace", namespace);
-                        properties.put("fullNamespace", fullNamespace);
-                        properties.put("created", true);
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tenant", tenant);
+                        result.put("namespace", namespace);
+                        result.put("created", true);
 
-                        return createSuccessResult("Namespace created successfully", properties);
+                        return createSuccessResult("Namespace created successfully", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to create namespace", e);
                         return createErrorResult("Failed to create namespace: " + e.getMessage());
@@ -217,11 +211,13 @@ public class NamespaceTools extends BasePulsarTools {
                     "properties": {
                         "tenant": {
                             "type": "string",
-                            "description": "The tenant name"
+                            "description": "Tenant name (default: 'public')",
+                            "default": "public"
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         },
                         "force": {
                             "type": "boolean",
@@ -229,7 +225,7 @@ public class NamespaceTools extends BasePulsarTools {
                             "default": false
                         }
                     },
-                    "required": ["tenant", "namespace"]
+                    "required": ["namespace"]
                 }
                 """
         );
@@ -238,29 +234,29 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
+                        String fullNamespace = resolveNamespace(request.arguments());
                         boolean force = getBooleanParam(request.arguments(), "force", false);
 
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
+
                         if (isSystemNamespace(namespace)) {
-                            return createErrorResult("Cannot delete namespace because it is a system namespace");
+                            return createErrorResult("Cannot delete system namespace: " + namespace);
                         }
 
                         pulsarAdmin.namespaces().deleteNamespace(fullNamespace, force);
 
-                        Map<String, Object> properties = new HashMap<>();
-                        properties.put("tenant", tenant);
-                        properties.put("namespace", namespace);
-                        properties.put("fullNamespace", fullNamespace);
-                        properties.put("force", force);
-                        properties.put("deleted", true);
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tenant", tenant);
+                        result.put("namespace", namespace);
+                        result.put("force", force);
+                        result.put("deleted", true);
 
-                        return createSuccessResult("Namespace deleted successfully", Map.of(
-                                "tenant", tenant,
-                                "namespace", namespace,
-                                "force", force
-                        ));
+                        return createSuccessResult("Namespace deleted successfully", result);
+
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to delete namespace", e);
                         return createErrorResult("Failed to delete namespace: " + e.getMessage());
@@ -278,11 +274,13 @@ public class NamespaceTools extends BasePulsarTools {
                     "properties": {
                         "tenant": {
                             "type": "string",
-                            "description": "The tenant name"
+                            "description": "Tenant name (default: 'public')",
+                            "default": "public"
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         },
                         "retentionTimeInMinutes": {
                             "type": "integer",
@@ -304,12 +302,14 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
+                        String fullNamespace = resolveNamespace(request.arguments());
+
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
                         Integer retentionTime = getIntParam(request.arguments(), "retentionTimeInMinutes", -1);
                         Integer retentionSize =  getIntParam(request.arguments(), "retentionSizeInMB", -1);
 
-                        String fullNamespace = tenant + "/" + namespace;
 
                         RetentionPolicies policies = new RetentionPolicies(retentionTime, retentionSize);
                         pulsarAdmin.namespaces().setRetention(fullNamespace, policies);
@@ -319,10 +319,11 @@ public class NamespaceTools extends BasePulsarTools {
                         result.put("namespace", namespace);
                         result.put("retentionTime", retentionTime);
                         result.put("retentionSize", retentionSize);
-                        result.put("fullNamespace", fullNamespace);
 
                         return createSuccessResult("Retention policy set successfully", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to set retention policy", e);
                         return createErrorResult("Failed to set retention policy: " + e.getMessage());
@@ -344,7 +345,8 @@ public class NamespaceTools extends BasePulsarTools {
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         }
                     },
                     "required": ["tenant", "namespace"]
@@ -356,16 +358,17 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
+                        String fullNamespace = resolveNamespace(request.arguments());
+
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
 
                         RetentionPolicies policies = pulsarAdmin.namespaces().getRetention(fullNamespace);
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("tenant", tenant);
                         result.put("namespace", namespace);
-                        result.put("fullNamespace", fullNamespace);
 
                         if (policies != null) {
                             result.put("retentionTimeInMinutes", policies.getRetentionTimeInMinutes());
@@ -396,7 +399,8 @@ public class NamespaceTools extends BasePulsarTools {
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         },
                         "limitSizeInBytes": {
                             "type": "integer",
@@ -417,8 +421,12 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
+                        String fullNamespace = resolveNamespace(request.arguments());
+
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
+
                         Integer limitSize = getIntParam(request.arguments(), "limitSizeInBytes", 0);
                         String policyStr = getRequiredStringParam(request.arguments(), "policy");
 
@@ -444,7 +452,6 @@ public class NamespaceTools extends BasePulsarTools {
                                                 + "producer_exception, consumer_backlog_eviction"));
                         }
 
-                        String fullNamespace = tenant + "/" + namespace;
                         BacklogQuota quota = BacklogQuota.builder()
                                 .limitSize(limitSize)
                                 .retentionPolicy(policy)
@@ -457,7 +464,6 @@ public class NamespaceTools extends BasePulsarTools {
                         result.put("namespace", namespace);
                         result.put("limitSizeInBytes", limitSize);
                         result.put("policy", policy.name());
-                        result.put("fullNamespace", fullNamespace);
 
                         return createSuccessResult("Backlog quota set successfully", result);
 
@@ -482,7 +488,8 @@ public class NamespaceTools extends BasePulsarTools {
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         }
                     },
                     "required": ["tenant", "namespace"]
@@ -494,9 +501,11 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
+                        String fullNamespace = resolveNamespace(request.arguments());
+
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
 
                         Map<BacklogQuota.BacklogQuotaType, BacklogQuota> quotas =
                                 pulsarAdmin.namespaces().getBacklogQuotaMap(fullNamespace);
@@ -504,7 +513,6 @@ public class NamespaceTools extends BasePulsarTools {
                         Map<String, Object> result = new HashMap<>();
                         result.put("tenant", tenant);
                         result.put("namespace", namespace);
-                        result.put("fullNamespace", fullNamespace);
 
                         if (quotas.isEmpty()) {
                             result.put("message", "No backlog quota configured");
@@ -543,7 +551,8 @@ public class NamespaceTools extends BasePulsarTools {
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         }
                     },
                     "required": ["tenant", "namespace"]
@@ -555,9 +564,11 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
+                        String fullNamespace = resolveNamespace(request.arguments());
+
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
                         String subscriptionName = getStringParam(
                                 request.arguments(),
                                 "subscriptionName");
@@ -573,7 +584,6 @@ public class NamespaceTools extends BasePulsarTools {
                         Map<String, Object> result = new HashMap<>();
                         result.put("tenant", tenant);
                         result.put("namespace", namespace);
-                        result.put("fullNamespace", fullNamespace);
 
                         return createSuccessResult("Namespace backlog cleared successfully", result);
                     } catch (Exception e) {
@@ -597,7 +607,8 @@ public class NamespaceTools extends BasePulsarTools {
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         }
                     },
                     "required": ["tenant", "namespace"]
@@ -609,11 +620,11 @@ public class NamespaceTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(),
-                                "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(),
-                                "namespace");
-                        String fullNamespace = tenant + "/" + namespace;
+                        String fullNamespace = resolveNamespace(request.arguments());
+
+                        String[] parts = fullNamespace.split("/");
+                        String tenant = parts[0];
+                        String namespace = parts[1];
 
                         List<String> topics = pulsarAdmin.topics().
                                 getList(fullNamespace);
@@ -629,7 +640,6 @@ public class NamespaceTools extends BasePulsarTools {
                         result.put("persistentTopics", persistentTopics);
                         result.put("nonPersistentTopics", nonPersistentTopics);
                         result.put("topics", topics);
-                        result.put("fullNamespace", fullNamespace);
 
                         return createSuccessResult("Namespace stats retrieved successfully", result);
                     } catch (Exception e) {

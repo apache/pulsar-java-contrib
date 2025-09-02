@@ -56,13 +56,10 @@ public class TopicTools extends BasePulsarTools {
                                     "type": "string",
                                     "description": "The tenant name"
                                 },
-                                "namespaceName": {
-                                    "type": "string",
-                                    "description": "The namespace name (without tenant prefix)"
-                                },
                                 "namespace": {
                                     "type": "string",
-                                    "description": "Namespace in 'tenant/namespace' format"
+                                    "description": "Namespace name or full path ('orders' or 'public/orders')",
+                                    "default": "default"
                                 }
                             },
                             "required": []
@@ -74,8 +71,7 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-//                        String namespace = resolveNamespace(request.arguments());
-                        String namespace = getStringParam(request.arguments(), "namespace");
+                        String namespace = resolveNamespace(request.arguments());
 
                         var topics = pulsarAdmin.topics().getList(namespace);
 
@@ -104,10 +100,10 @@ public class TopicTools extends BasePulsarTools {
                             "properties": {
                                 "namespace": {
                                     "type": "string",
-                                    "description": "Namespace name (default: 'default')",
+                                    "description": "Namespace name or full path ('orders' or 'public/orders')",
                                     "default": "default"
                                 },
-                                "topicName": {
+                                "topic": {
                                     "type": "string",
                                     "description": "Topic name(simple:orders/full:persistent://public/default/orders)",
                                     "items": {
@@ -126,7 +122,7 @@ public class TopicTools extends BasePulsarTools {
                                     "minimum": 0
                                 }
                             },
-                            "required": ["topicName"]
+                            "required": ["topic"]
                         }
                         """
         );
@@ -135,21 +131,21 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         Integer partitions = getIntParam(request.arguments(), "partitions", 0);
 
                         if (partitions > 0) {
-                            pulsarAdmin.topics().createPartitionedTopic(topicName, partitions);
+                            pulsarAdmin.topics().createPartitionedTopic(topic, partitions);
                         } else {
-                            pulsarAdmin.topics().createNonPartitionedTopic(topicName);
+                            pulsarAdmin.topics().createNonPartitionedTopic(topic);
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("created", true);
                         result.put("partitions", partitions);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Topics created successfully", result);
                     } catch (IllegalArgumentException e) {
@@ -176,10 +172,10 @@ public class TopicTools extends BasePulsarTools {
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "Namespace name (default: 'default')",
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
                             "default": "default"
                         },
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')",
                             "items": {
@@ -198,7 +194,7 @@ public class TopicTools extends BasePulsarTools {
                             "default": true
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -207,17 +203,17 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         Boolean force = getBooleanParam(request.arguments(), "force", false);
 
-                        pulsarAdmin.topics().delete(topicName, force);
+                        pulsarAdmin.topics().delete(topic, force);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("deleted", true);
                         result.put("force", force);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Topic deleted successfully", result);
 
@@ -238,12 +234,12 @@ public class TopicTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -252,12 +248,12 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topicName);
+                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("msgRateIn", stats.getMsgRateIn());
                         result.put("msgRateOut", stats.getMsgRateOut());
                         result.put("msgThroughputIn", stats.getMsgThroughputIn());
@@ -285,12 +281,12 @@ public class TopicTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -299,12 +295,12 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        var metadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topicName);
+                        var metadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("partitions", metadata.partitions);
                         result.put("isPartitioned", metadata.partitions > 0);
 
@@ -350,7 +346,7 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         Integer partitions = getIntParam(request.arguments(), "partitions", 0);
 
                         if (partitions <= 0) {
@@ -358,7 +354,7 @@ public class TopicTools extends BasePulsarTools {
                                     + "must be at least 1");
                         }
 
-                        var currentMetadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topicName);
+                        var currentMetadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
                         int currentPartitions = currentMetadata.partitions;
 
                         if (currentPartitions == 0) {
@@ -374,15 +370,15 @@ public class TopicTools extends BasePulsarTools {
                                     + ")");
                         }
 
-                        pulsarAdmin.topics().updatePartitionedTopic(topicName, partitions);
+                        pulsarAdmin.topics().updatePartitionedTopic(topic, partitions);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("previousPartitions", currentPartitions);
                         result.put("newPartitions", partitions);
                         result.put("updated", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Topic partitions updated successfully", result);
 
@@ -404,12 +400,12 @@ public class TopicTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -418,14 +414,14 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        pulsarAdmin.topics().triggerCompaction(topicName);
+                        pulsarAdmin.topics().triggerCompaction(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("compactionTriggered", true);
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Compaction triggered successfully for topic: ", result);
 
@@ -446,12 +442,12 @@ public class TopicTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -460,15 +456,15 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        pulsarAdmin.topics().unload(topicName);
+                        pulsarAdmin.topics().unload(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("unloaded", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Topic unloaded successfully: ", result);
 
@@ -489,12 +485,12 @@ public class TopicTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                            "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                        }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -503,12 +499,12 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topicName);
+                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
 
                         Map<String, Object> subscriptionBacklogs = new HashMap<>();
                         long totalBacklog = 0;
@@ -532,7 +528,7 @@ public class TopicTools extends BasePulsarTools {
                         result.put("subscriptionBacklogs", subscriptionBacklogs);
                         result.put("subscriptionCount", stats.getSubscriptions().size());
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Topic backlog fetched successfully", result);
 
@@ -553,7 +549,7 @@ public class TopicTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                          },
@@ -567,7 +563,7 @@ public class TopicTools extends BasePulsarTools {
                             "description": "Subscription name to expire message for"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -576,23 +572,23 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
                         Integer expireTimeInSeconds = getIntParam(request.arguments(), "expireTimeInSeconds", 0);
 
                         if (expireTimeInSeconds > 0) {
-                            pulsarAdmin.topics().expireMessages(topicName, subscriptionName, expireTimeInSeconds);
+                            pulsarAdmin.topics().expireMessages(topic, subscriptionName, expireTimeInSeconds);
                         } else {
-                            pulsarAdmin.topics().expireMessagesForAllSubscriptions(topicName, expireTimeInSeconds);
+                            pulsarAdmin.topics().expireMessagesForAllSubscriptions(topic, expireTimeInSeconds);
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("expireTimeInSeconds", expireTimeInSeconds);
                         result.put("expired", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Expired messages on topic successfully", result);
                     } catch (IllegalArgumentException e) {
@@ -635,20 +631,20 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         Integer count = getIntParam(request.arguments(), "count", 1);
 
                         var messages = pulsarAdmin.topics()
-                                .peekMessages(topicName, subscription, count);
+                                .peekMessages(topic, subscription, count);
 
                         Map<String, Object> results = new HashMap<>();
-                        results.put("topicName", topicName);
+                        results.put("topic", topic);
                         results.put("subscription", subscription);
                         results.put("count", count);
                         results.put("messages", messages);
 
-                        addTopicBreakdown(results, topicName);
+                        addTopicBreakdown(results, topic);
 
                         return createSuccessResult("Messages peeked successfully", results);
 
@@ -692,23 +688,23 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         Long timestamp = getLongParam(request.arguments(), "timestamp", 0L);
 
                         if (timestamp <= 0){
-                            pulsarAdmin.topics().resetCursor(topicName, subscription, 0L);
+                            pulsarAdmin.topics().resetCursor(topic, subscription, 0L);
                         } else {
-                            pulsarAdmin.topics().resetCursor(topicName, subscription, timestamp);
+                            pulsarAdmin.topics().resetCursor(topic, subscription, timestamp);
                         }
 
                         Map<String, Object> response = new HashMap<>();
-                        response.put("topic", topicName);
+                        response.put("topic", topic);
                         response.put("subscription", subscription);
                         response.put("timestamp", timestamp);
                         response.put("reset", true);
 
-                        addTopicBreakdown(response, topicName);
+                        addTopicBreakdown(response, topic);
 
                         return createSuccessResult("Cursor reset successfully", response);
                     } catch (IllegalArgumentException e) {
@@ -742,12 +738,12 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        var internalStats = pulsarAdmin.topics().getInternalStats(topicName);
+                        var internalStats = pulsarAdmin.topics().getInternalStats(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("entriesAddedCounter", internalStats.entriesAddedCounter);
                         result.put("numberOfEntries", internalStats.numberOfEntries);
                         result.put("totalSize", internalStats.totalSize);
@@ -780,7 +776,7 @@ public class TopicTools extends BasePulsarTools {
                             });
                             result.put("cursors", internalStats.cursors);
                         }
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
                         return createSuccessResult("Internal stats retrieved successfully", result);
 
                     } catch (IllegalArgumentException e) {
@@ -815,18 +811,18 @@ public class TopicTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        var partitionedMetadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topicName);
+                        var partitionedMetadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic", topicName);
+                        result.put("topic", topic);
                         result.put("partitions", partitionedMetadata.partitions);
                         result.put("isPartitioned", partitionedMetadata.partitions > 0);
 
                         if (partitionedMetadata.partitions > 0) {
                             try {
-                               var partitionStats = pulsarAdmin.topics().getPartitionedStats(topicName, true);
+                               var partitionStats = pulsarAdmin.topics().getPartitionedStats(topic, true);
                                 result.put("msgRateIn", partitionStats.getMsgRateIn());
                                 result.put("msgRateOut", partitionStats.getMsgRateOut());
                                 result.put("msgThroughputIn", partitionStats.getMsgThroughputIn());
@@ -853,7 +849,7 @@ public class TopicTools extends BasePulsarTools {
                             result.put("message", "Topic is not partitioned");
                         }
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
                         return createSuccessResult("Partitioned metadata retrieved successfully", result);
 
                     } catch (IllegalArgumentException e) {

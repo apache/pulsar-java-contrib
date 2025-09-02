@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<licensePluginReport goal="CHECK" timestamp="1756554976353">
+<licensePluginReport goal="CHECK" timestamp="1756798251918">
     <module artifactId="mcp-contrib" groupId="org.apache" version="1.0.0-SNAPSHOT"/>
     <files>
         <file path="pom.xml" result="PRESENT"/>
@@ -20,7 +20,7 @@
         <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\TopicTools.java" result="PRESENT"/>
         <file path="src\main\java\org\apache\pulsar\admin\mcp\tools\package-info.java" result="PRESENT"/>
         <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\AbstractMCPServer.java" result="PRESENT"/>
-        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\HttpSseMCPServer.java" result="PRESENT"/>
+        <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\HttpMCPServer.java" result="PRESENT"/>
         <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\StdioMCPServer.java" result="PRESENT"/>
         <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\Transport.java" result="PRESENT"/>
         <file path="src\main\java\org\apache\pulsar\admin\mcp\transport\TransportLauncher.java" result="PRESENT"/>

@@ -46,10 +46,10 @@ public class TransportLauncher {
 
     private static void startTransport(PulsarMCPCliOptions options) throws Exception {
 
-            TransportManager transportManager = new TransportManager();
+        TransportManager transportManager = new TransportManager();
 
         transportManager.registerTransport(new StdioMCPServer());
-        transportManager.registerTransport(new HttpSseMCPServer());
+        transportManager.registerTransport(new HttpMCPServer());
 
         switch (options.getTransport()) {
             case HTTP -> {

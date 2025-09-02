@@ -102,7 +102,6 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
 
         registerToolsConditionally(mcpServer, enabledTools);
 
-//        logger.info("Registered tools: {} for stdio transport", enabledTools.size());
     }
 
     public static void main(String[] args) {

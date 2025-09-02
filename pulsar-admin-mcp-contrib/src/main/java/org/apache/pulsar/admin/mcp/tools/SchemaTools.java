@@ -56,11 +56,12 @@ public class SchemaTools extends BasePulsarTools{
                         },
                         "namespace": {
                             "type": "string",
-                            "description": "The namespace name (without tenant prefix)"
+                            "description": "Namespace name or full path ('orders' or 'public/orders')",
+                            "default": "default"
                         },
                         "topic": {
                             "type": "string",
-                            "description": "The topic name (without tenant/namespace prefix)"
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         }
                     },
                     "required": ["tenant", "namespace", "topic"]
@@ -72,15 +73,9 @@ public class SchemaTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String tenant = getRequiredStringParam(request.arguments(), "tenant");
-                        String namespace = getRequiredStringParam(request.arguments(), "namespace");
+                        String topic = buildFullTopicName(request.arguments());
 
-                        // 待改正
-                        String topic = getRequiredStringParam(request.arguments(), "topic");
-
-                        String fullTopic = "persistent://" + tenant + "/" + namespace + "/" + topic;
-
-                        SchemaInfo schemaInfo = pulsarAdmin.schemas().getSchemaInfo(fullTopic);
+                        SchemaInfo schemaInfo = pulsarAdmin.schemas().getSchemaInfo(topic);
                         Map<String, Object> result = new HashMap<>();
                         result.put("schemaType", schemaInfo.getType().name());
                         result.put("schema", Base64.getEncoder().encodeToString(schemaInfo.getSchema()));
@@ -104,12 +99,12 @@ public class SchemaTools extends BasePulsarTools{
                 {
                   "type": "object",
                   "properties": {
-                    "topicName": {
+                    "topic": {
                       "type": "string",
                       "description": "Topic name (simple: 'orders', full: 'persistent://public/default/orders')"
                     }
                   },
-                  "required": ["topicName"]
+                  "required": ["topic"]
                 }
                 """
         );
@@ -118,9 +113,9 @@ public class SchemaTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
 
-                        List<SchemaInfo> versions = pulsarAdmin.schemas().getAllSchemas(topicName);
+                        List<SchemaInfo> versions = pulsarAdmin.schemas().getAllSchemas(topic);
                         List<Map<String, Object>> versionList = new ArrayList<>();
 
                         for (int i = 0; i < versions.size(); i++) {
@@ -134,10 +129,10 @@ public class SchemaTools extends BasePulsarTools{
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("schemaVersions", versionList);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
                         return createSuccessResult("Schema versions retrieved", result);
 
                     } catch (IllegalArgumentException e) {
@@ -166,7 +161,7 @@ public class SchemaTools extends BasePulsarTools{
                             "description": "Index of the schema version to retrieve (0-based)"
                         }
                     },
-                    "required": ["topicName", "versionIndex"]
+                    "required": ["topic", "versionIndex"]
                 }
                 """
         );
@@ -175,12 +170,12 @@ public class SchemaTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         int versionIndex = getIntParam(request.arguments(), "versionIndex", 0);
 
                         List<SchemaInfo> schemaInfos = pulsarAdmin
                                 .schemas()
-                                .getAllSchemas(topicName);
+                                .getAllSchemas(topic);
                         if (versionIndex < 0 || versionIndex >= schemaInfos.size()) {
                             return createErrorResult("Invalid versionIndex: "
                                     + versionIndex
@@ -191,14 +186,14 @@ public class SchemaTools extends BasePulsarTools{
                         SchemaInfo schemaInfo = schemaInfos.get(versionIndex);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("versionIndex", versionIndex);
                         result.put("type", schemaInfo.getType().toString());
                         result.put("schema", new String(schemaInfo.getSchema()));
                         result.put("properties", schemaInfo.getProperties());
                         result.put("name", schemaInfo.getName());
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Fetched schema version " + versionIndex + " successfully", result);
                     } catch (IllegalArgumentException e) {
@@ -218,7 +213,7 @@ public class SchemaTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -236,7 +231,7 @@ public class SchemaTools extends BasePulsarTools{
                             "description": "Optional schema properties (key-value map)"
                         }
                     },
-                    "required": ["topicName", "schema", "schemaType"]
+                    "required": ["topic", "schema", "schemaType"]
                 }
                 """
         );
@@ -245,7 +240,7 @@ public class SchemaTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String schemaStr = getRequiredStringParam(request.arguments(), "schema");
                         String schemaTypeStr = getRequiredStringParam(request.arguments(), "schemaType");
 
@@ -258,22 +253,22 @@ public class SchemaTools extends BasePulsarTools{
                         }
 
                         SchemaInfo schemaInfo = SchemaInfo.builder()
-                                .name(topicName)
+                                .name(topic)
                                 .type(schemaType)
                                 .schema(schemaStr.getBytes(StandardCharsets.UTF_8))
                                 .build();
 
-                        pulsarAdmin.schemas().createSchema(topicName, schemaInfo);
+                        pulsarAdmin.schemas().createSchema(topic, schemaInfo);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("schema", schemaStr);
                         result.put("schemaType", schemaTypeStr);
                         result.put("uploade", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
-                        return createSuccessResult("Schema uploaded successfully to topic: " + topicName, null);
+                        return createSuccessResult("Schema uploaded successfully to topic: " + topic, null);
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult("Invalid schemaType: " + e.getMessage());
@@ -293,7 +288,7 @@ public class SchemaTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -303,7 +298,7 @@ public class SchemaTools extends BasePulsarTools{
                             "default": false
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -312,19 +307,19 @@ public class SchemaTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         Boolean force = getBooleanParam(request.arguments(), "force", false);
 
-                        pulsarAdmin.schemas().deleteSchema(topicName, force);
+                        pulsarAdmin.schemas().deleteSchema(topic, force);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("deleted", true);
                         result.put("force", force);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
-                        return createSuccessResult("Schema deleted successfully from topic: " + topicName, result);
+                        return createSuccessResult("Schema deleted successfully from topic: " + topic, result);
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult(e.getMessage());
@@ -344,7 +339,7 @@ public class SchemaTools extends BasePulsarTools{
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -358,7 +353,7 @@ public class SchemaTools extends BasePulsarTools{
                             "enum": ["AVRO", "JSON", "STRING", "PROTOBUF", "KEY_VALUE", "BYTES"]
                         }
                     },
-                    "required": ["topicName", "schema", "schemaType"]
+                    "required": ["topic", "schema", "schemaType"]
                 }
                 """
         );
@@ -367,7 +362,7 @@ public class SchemaTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String schemaStr = getRequiredStringParam(request.arguments(), "schema");
                         String schemaTypeStr = getRequiredStringParam(request.arguments(), "schemaType");
 
@@ -380,20 +375,20 @@ public class SchemaTools extends BasePulsarTools{
                         }
 
                         SchemaInfo schemaInfo = SchemaInfo.builder()
-                                .name(topicName)
+                                .name(topic)
                                 .type(schemaType)
                                 .schema(schemaStr.getBytes(StandardCharsets.UTF_8))
                                 .build();
 
-                        var compatibilityResponse = pulsarAdmin.schemas().testCompatibility(topicName, schemaInfo);
+                        var compatibilityResponse = pulsarAdmin.schemas().testCompatibility(topic, schemaInfo);
                         boolean isCompatible = compatibilityResponse.isCompatibility();
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("isCompatible", isCompatible);
                         result.put("schemaType", schemaType);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Compatibility test result: " + isCompatible, result);
                     } catch (IllegalArgumentException e) {

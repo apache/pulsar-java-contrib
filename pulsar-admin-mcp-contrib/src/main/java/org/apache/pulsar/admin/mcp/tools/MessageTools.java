@@ -71,7 +71,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -86,7 +86,7 @@ public class MessageTools extends BasePulsarTools {
                             "default": 1
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -95,7 +95,7 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
                         int numMessages = getIntParam(request.arguments(), "numMessages", 1);
 
@@ -104,7 +104,7 @@ public class MessageTools extends BasePulsarTools {
                         }
 
                         List<Message<byte[]>> messages = pulsarAdmin.topics()
-                                .peekMessages(topicName, subscriptionName, numMessages);
+                                .peekMessages(topic, subscriptionName, numMessages);
 
                         List<Map<String, Object>> messageList = new ArrayList<>();
                         for (Message<byte[]> msg : messages) {
@@ -117,12 +117,12 @@ public class MessageTools extends BasePulsarTools {
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("messagesCount", messages.size());
                         result.put("messages", messageList);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Peeked " + messageList.size() + " message(s) successfully", result);
 
@@ -144,7 +144,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -159,7 +159,7 @@ public class MessageTools extends BasePulsarTools {
                             "default": 5
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -169,7 +169,7 @@ public class MessageTools extends BasePulsarTools {
                 .callHandler((exchange, request) -> {
                     Reader<byte[]> reader = null;
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getStringParam(request.arguments(), "subscriptionName");
                         int numMessages = getIntParam(request.arguments(), "numMessages", 5);
 
@@ -178,12 +178,12 @@ public class MessageTools extends BasePulsarTools {
                         }
 
                         List<Message<byte[] >> messages = pulsarAdmin.topics().peekMessages(
-                                topicName,
+                                topic,
                                 subscriptionName,
                                 numMessages);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("messageCount", messages.size());
 
@@ -204,7 +204,7 @@ public class MessageTools extends BasePulsarTools {
 
                         result.put("messages", detailedMessages);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Examined messages successfully", result);
 
@@ -226,7 +226,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -235,7 +235,7 @@ public class MessageTools extends BasePulsarTools {
                             "description": "Subscription name to skip messages for"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -244,18 +244,18 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-                        pulsarAdmin.topics().skipAllMessages(topicName, subscriptionName);
+                        pulsarAdmin.topics().skipAllMessages(topic, subscriptionName);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName",
                                 subscriptionName);
                         result.put("skippedAll", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Skipped all messages for subscription: "
                                 + subscriptionName, result);
@@ -278,7 +278,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -287,7 +287,7 @@ public class MessageTools extends BasePulsarTools {
                             "description": "Subscription name whose messages should be expired"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -296,18 +296,18 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-                        pulsarAdmin.topics().expireMessages(topicName, subscriptionName, 0);
+                        pulsarAdmin.topics().expireMessages(topic, subscriptionName, 0);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName",
-                                topicName);
+                        result.put("topic",
+                                topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("expiredAll", true);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Expired all messages for subscription: "
                                 + subscriptionName, result);
@@ -330,7 +330,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -339,7 +339,7 @@ public class MessageTools extends BasePulsarTools {
                             "description": "Subscription name to check backlog for"
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -348,21 +348,21 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
                         long backlog = pulsarAdmin.topics()
-                                .getStats(topicName)
+                                .getStats(topic)
                                 .getSubscriptions()
                                 .get(subscriptionName)
                                 .getMsgBacklog();
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("backlog", backlog);
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Backlog retrieved successfully", result);
 
@@ -384,7 +384,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -401,7 +401,7 @@ public class MessageTools extends BasePulsarTools {
                             "description": "Optional key-value properties for the message"
                         }
                     },
-                    "required": ["topicName", "message"]
+                    "required": ["topic", "message"]
                 }
                 """
         );
@@ -410,15 +410,15 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String message = getRequiredStringParam(request.arguments(), "message");
                         String key = getStringParam(request.arguments(), "key");
 
                         if (hasClientSupport()) {
-                            return sendMessageWithClient(topicName, message, key, request.arguments());
+                            return sendMessageWithClient(topic, message, key, request.arguments());
                         } else {
                             Map<String, Object> result = new HashMap<>();
-                            result.put("topicName", topicName);
+                            result.put("topic", topic);
                             result.put("messageId", message);
                             result.put("messageSize", message.getBytes().length);
                             result.put("status", "not_implemented");
@@ -427,10 +427,10 @@ public class MessageTools extends BasePulsarTools {
                                 result.put("key", key);
                             }
 
-                            addTopicBreakdown(result, topicName);
+                            addTopicBreakdown(result, topic);
 
                             return createSuccessResult("Message sent successfully to topic: "
-                                    + topicName, result);
+                                    + topic, result);
                         }
 
                     } catch (IllegalArgumentException e) {
@@ -443,10 +443,10 @@ public class MessageTools extends BasePulsarTools {
         );
     }
 
-    private McpSchema.CallToolResult sendMessageWithClient(String topicName, String messageContent,
+    private McpSchema.CallToolResult sendMessageWithClient(String topic, String messageContent,
                                                            String key, Map<String, Object> arguments) {
         ProducerBuilder<byte[]> producerBuilder = pulsarClient.newProducer()
-                .topic(topicName)
+                .topic(topic)
                 .enableBatching(true)
                 .sendTimeout(30, TimeUnit.SECONDS);
 
@@ -476,7 +476,7 @@ public class MessageTools extends BasePulsarTools {
             MessageId messageId = msgBuilder.send();
 
             Map<String, Object> result = new HashMap<>();
-            result.put("topicName", topicName);
+            result.put("topic", topic);
             result.put("messageId", messageId.toString());
             result.put("message", messageContent);
             if (key != null && !key.isEmpty()) {
@@ -486,9 +486,9 @@ public class MessageTools extends BasePulsarTools {
                 result.put("properties", propertiesObj);
             }
 
-            addTopicBreakdown(result, topicName);
+            addTopicBreakdown(result, topic);
 
-            return createSuccessResult("Message sent successfully to topic: " + topicName, result);
+            return createSuccessResult("Message sent successfully to topic: " + topic, result);
 
         } catch (PulsarClientException e) {
             LOGGER.error("Failed to send message", e);
@@ -507,7 +507,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -516,7 +516,7 @@ public class MessageTools extends BasePulsarTools {
                             "description": "Optional subscription name to get stats for a specific subscription"
                         }
                     },
-                    "required": ["topicName"]
+                    "required": ["topic"]
                 }
                 """
         );
@@ -525,13 +525,13 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topicName = buildFullTopicName(request.arguments());
+                        String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getStringParam(request.arguments(), "subscriptionName");
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topicName);
+                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topicName);
+                        result.put("topic", topic);
                         result.put("msgInCounter", stats.getMsgInCounter());
                         result.put("msgOutCounter", stats.getMsgOutCounter());
                         result.put("bytesInCounter", stats.getBytesInCounter());
@@ -545,7 +545,7 @@ public class MessageTools extends BasePulsarTools {
                             result.put("msgRateRedeliver", subStats.getMsgRateRedeliver());
                         }
 
-                        addTopicBreakdown(result, topicName);
+                        addTopicBreakdown(result, topic);
 
                         return createSuccessResult("Fetched message stats successfully", result);
 
@@ -567,7 +567,7 @@ public class MessageTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "topicName": {
+                        "topic": {
                             "type": "string",
                             "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                         },
@@ -588,7 +588,7 @@ public class MessageTools extends BasePulsarTools {
                             "default": 5000
                         }
                     },
-                    "required": ["topicName", "subscriptionName"]
+                    "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -633,7 +633,7 @@ public class MessageTools extends BasePulsarTools {
                         }
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topicName", topic);
+                        result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("requestCount", messageCount);
                         result.put("receivedCount", messages.size());
