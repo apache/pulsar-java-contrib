@@ -14,10 +14,8 @@
 package org.apache.pulsar.admin.mcp.transport;
 
 import io.modelcontextprotocol.server.McpServer;
-import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.slf4j.Logger;
@@ -35,14 +33,25 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
             return;
         }
 
-//        logger.info("Starting Pulsar MCP server");
-
         if (!options.isDebug()) {
             disableLogging();
         }
 
         try {
-            initializePulsarAdmin();
+            initialize(options);
+
+            var mcpServer = McpServer.sync(new StdioServerTransportProvider())
+                    .serverInfo("pulsar-admin-stdio", "1.0.0")
+                    .capabilities(McpSchema.ServerCapabilities.builder()
+                            .tools(true)
+                            .build())
+                    .build();
+
+            registerFilteredTools(mcpServer, options);
+
+            running.set(true);
+
+            Thread.currentThread().join();
         } catch (Exception e) {
             logger.error("Failed to initialize PulsarAdmin", e);
             if (options.isDebug()) {
@@ -52,21 +61,6 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
                     + "Please ensure Pulsar is running at"
                     + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
         }
-
-
-        var mcpServer = McpServer.sync(new StdioServerTransportProvider())
-                .serverInfo("pulsar-admin-stdio", "1.0.0")
-                .capabilities(McpSchema.ServerCapabilities.builder()
-                        .tools(true)
-                        .build())
-                .build();
-
-        registerFilteredTools(mcpServer,  options);
-
-        running.set(true);
-//        logger.info("Pulsar MCP server started");
-
-        Thread.currentThread().join();
     }
 
     @Override
@@ -75,8 +69,16 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
             return;
         }
 
-        logger.info("Stopping Pulsar MCP server....");
         running.set(false);
+
+        if (pulsarClientManager != null) {
+            try {
+                pulsarClientManager.close();
+            } catch (Exception e) {
+                logger.warn("Error closing PulsarManager: {}", e.getMessage());
+            }
+        }
+
         logger.info("Pulsar MCP server stopped successfully");
     }
 
@@ -88,20 +90,6 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
     @Override
     public boolean isRunning() {
         return running.get();
-    }
-
-    private void registerFilteredTools(McpSyncServer mcpServer, PulsarMCPCliOptions options) {
-
-        Set<String> allTools = getAllAvailableTools();
-
-        Set<String> enabledTools = options.getFilteredTools(allTools);
-
-        if (options.isDebug()) {
-            logger.info("Enable tools: {}", enabledTools);
-        }
-
-        registerToolsConditionally(mcpServer, enabledTools);
-
     }
 
     public static void main(String[] args) {
