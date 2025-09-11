@@ -15,6 +15,7 @@ package org.apache.pulsar.admin.mcp.transport;
 
 import io.modelcontextprotocol.server.McpSyncServer;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.apache.pulsar.admin.mcp.tools.ClusterTools;
@@ -26,6 +27,7 @@ import org.apache.pulsar.admin.mcp.tools.SubscriptionTools;
 import org.apache.pulsar.admin.mcp.tools.TenantTools;
 import org.apache.pulsar.admin.mcp.tools.TopicTools;
 import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.client.admin.PulsarAdminBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +36,36 @@ public abstract class AbstractMCPServer {
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractMCPServer.class);
     protected PulsarClientManager pulsarClientManager;
+    protected static PulsarAdmin pulsarAdmin;
 
-    public void initialize(PulsarMCPCliOptions options) throws Exception {
-        this.pulsarClientManager = new PulsarClientManager(options);
+    public void initializePulsarAdmin(PulsarMCPCliOptions options) throws Exception {
+        String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
+
+        try {
+            PulsarAdminBuilder adminBuilder = PulsarAdmin.builder()
+                    .serviceHttpUrl(adminUrl)
+                    .connectionTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS);
+
+            String authPlugin = System.getProperty("pulsar.auth-plugin");
+            String authParams = System.getProperty("pulsar.auth-params");
+            if (authPlugin != null && authParams != null) {
+                adminBuilder.authentication(authPlugin, authParams);
+                LOGGER.info("Authentication configured: {}", authPlugin);
+            }
+
+            pulsarAdmin = adminBuilder.build();
+
+            try {
+                pulsarAdmin.clusters().getClusters();
+            } catch (Exception e) {
+                pulsarAdmin.close();
+                pulsarAdmin = null;
+                throw new RuntimeException("Cannot connect to Pulsar clusters.", e);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to initialize PulsarAdmin", e);
+        }
     }
 
     protected PulsarAdmin getPulsarAdmin() throws Exception {
@@ -63,14 +92,14 @@ public abstract class AbstractMCPServer {
         }
 
         try {
-            registerToolsConditionally(mcpServer, enabledTools, getPulsarAdmin(), pulsarClientManager);
+            registerToolsConditionally(mcpServer, enabledTools, pulsarClientManager);
         } catch (Exception e) {
             throw new RuntimeException("Failed to register tools", e);
         }
     }
 
     protected  static void registerToolsConditionally(
-            McpSyncServer mcpServer, Set<String> enabledTools, PulsarAdmin pulsarAdmin,
+            McpSyncServer mcpServer, Set<String> enabledTools,
             PulsarClientManager pulsarClientManager) {
         if (pulsarAdmin == null) {
             throw new RuntimeException("PulsarAdmin has not been initialized");

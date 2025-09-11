@@ -38,20 +38,7 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
         }
 
         try {
-            initialize(options);
-
-            var mcpServer = McpServer.sync(new StdioServerTransportProvider())
-                    .serverInfo("pulsar-admin-stdio", "1.0.0")
-                    .capabilities(McpSchema.ServerCapabilities.builder()
-                            .tools(true)
-                            .build())
-                    .build();
-
-            registerFilteredTools(mcpServer, options);
-
-            running.set(true);
-
-            Thread.currentThread().join();
+            initializePulsarAdmin(options);
         } catch (Exception e) {
             logger.error("Failed to initialize PulsarAdmin", e);
             if (options.isDebug()) {
@@ -61,6 +48,19 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
                     + "Please ensure Pulsar is running at"
                     + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
         }
+
+        var mcpServer = McpServer.sync(new StdioServerTransportProvider())
+                .serverInfo("pulsar-admin-stdio", "1.0.0")
+                .capabilities(McpSchema.ServerCapabilities.builder()
+                        .tools(true)
+                        .build())
+                .build();
+
+        registerFilteredTools(mcpServer, options);
+
+        running.set(true);
+
+        Thread.currentThread().join();
     }
 
     @Override

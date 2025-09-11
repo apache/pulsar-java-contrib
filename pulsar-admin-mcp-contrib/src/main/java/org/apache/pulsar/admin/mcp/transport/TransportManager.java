@@ -37,7 +37,6 @@ public class TransportManager {
     public void registerTransport(Transport transport) {
         TransportType type = transport.getType();
         transports.put(type, transport);
-//        logger.info("Transport registered for type {}", type.getDescription());
     }
 
     public void startTransport(TransportType type, PulsarMCPCliOptions  options) throws Exception {
