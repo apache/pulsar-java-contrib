@@ -41,7 +41,7 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
         logger.info("Starting HTTP SSE Pulsar MCP server");
 
         try {
-            initialize(options);
+            initializePulsarAdmin(options);
 
             var objectMapper = new ObjectMapper();
             var sseTransport = HttpServletSseServerTransportProvider.builder()

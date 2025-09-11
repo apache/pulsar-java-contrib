@@ -30,9 +30,10 @@ public class PulsarClientManager implements AutoCloseable {
 
     private PulsarAdmin pulsarAdmin;
     private PulsarClient pulsarClient;
+
     private final PulsarMCPCliOptions config;
-    private final AtomicBoolean adminInitialized = new AtomicBoolean(false);
-    private final AtomicBoolean clientInitialized = new AtomicBoolean(false);
+    private final AtomicBoolean adminInitialized = new AtomicBoolean();
+    private final AtomicBoolean clientInitialized = new AtomicBoolean();
 
     public PulsarClientManager(PulsarMCPCliOptions config){
         this.config = config;
