@@ -15,56 +15,48 @@ package org.apache.pulsar.admin.mcp.client;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.Getter;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PulsarClientManager {
+public class PulsarClientManager implements AutoCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(PulsarClientManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PulsarClientManager.class);
 
     private PulsarAdmin pulsarAdmin;
     private PulsarClient pulsarClient;
-
-    @Getter
     private final PulsarMCPCliOptions config;
-    private final AtomicBoolean initialized = new AtomicBoolean();
-    private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicBoolean adminInitialized = new AtomicBoolean(false);
+    private final AtomicBoolean clientInitialized = new AtomicBoolean(false);
 
-    @Autowired
     public PulsarClientManager(PulsarMCPCliOptions config){
         this.config = config;
     }
 
-    public synchronized void initialize() throws  Exception {
-        if (initialized.get()) {
-            return;
-        }
-
-        if (closed.get()) {
-            return;
-        }
-
-        try {
+    public synchronized PulsarAdmin getAdmin() throws Exception {
+        if (!adminInitialized.get()) {
             initializePulsarAdmin();
-
-            initializePulsarClient();
-
-            initialized.set(true);
-        } catch (Exception e) {
-            cleanup();
-            throw new RuntimeException("Failed to connect to Pulsar cluster", e);
         }
+        return pulsarAdmin;
+    }
+
+    public synchronized PulsarClient getClient() throws Exception {
+        if (!clientInitialized.get()) {
+            initializePulsarClient();
+        }
+        return pulsarClient;
     }
 
     private void initializePulsarAdmin() throws Exception {
+        if (adminInitialized.get()) {
+            return;
+        }
+
         PulsarAdminBuilder adminBuilder = PulsarAdmin.builder()
                 .serviceHttpUrl(config.getAdminUrl())
                 .connectionTimeout(30, TimeUnit.SECONDS)
@@ -75,9 +67,15 @@ public class PulsarClientManager {
         }
 
         this.pulsarAdmin = adminBuilder.build();
+        pulsarAdmin.clusters().getClusters();
+        adminInitialized.set(true);
     }
 
     private void initializePulsarClient() throws Exception {
+        if (clientInitialized.get()) {
+            return;
+        }
+
         var clientBuilder = PulsarClient.builder()
                 .serviceUrl(config.getServiceUrl())
                 .operationTimeout(30, TimeUnit.SECONDS)
@@ -89,44 +87,20 @@ public class PulsarClientManager {
         }
 
         this.pulsarClient = clientBuilder.build();
+        clientInitialized.set(true);
 
     }
 
-    public PulsarAdmin getPulsarAdmin() throws Exception {
-        if (!initialized.get()) {
-            initialize();
-        }
-        return pulsarAdmin;
-    }
-
-    public PulsarClient getPulsarClient() throws Exception {
-        if (!initialized.get()) {
-            initialize();
-        }
-        return pulsarClient;
-    }
-
-    public boolean isInitialized() {
-        return initialized.get();
-    }
-
-    private void cleanup() {
+    @Override
+    public void close() throws Exception {
         if (pulsarClient != null) {
-            try {
-                pulsarClient.close();
-            } catch (Exception e) {
-                logger.warn("Failed to close PulsarClient: {}", e.getMessage());
-            }
-            pulsarClient = null;
+            pulsarClient.close();
         }
-
         if (pulsarAdmin != null) {
-            try {
-                pulsarAdmin.close();
-            } catch (Exception e) {
-                logger.warn("Failed to close PulsarAdmin: {}", e.getMessage());
-            }
+            pulsarAdmin.close();
         }
-        initialized.set(false);
+        adminInitialized.set(false);
+        clientInitialized.set(false);
     }
+
 }

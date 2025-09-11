@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
@@ -38,15 +39,15 @@ import org.apache.pulsar.common.policies.data.TopicStats;
 
 public class MessageTools extends BasePulsarTools {
 
-    private final PulsarClient pulsarClient;
+    private final PulsarClientManager pulsarClientManager;
 
-    public MessageTools(PulsarAdmin pulsarAdmin) {
+    public MessageTools(PulsarAdmin pulsarAdmin, PulsarClientManager pulsarClientManager) {
         super(pulsarAdmin);
-        this.pulsarClient = null;
+        this.pulsarClientManager = pulsarClientManager;
     }
 
-    private boolean hasClientSupport() {
-        return pulsarClient != null;
+    private PulsarClient getPulsarClient() throws Exception {
+        return pulsarClientManager.getClient();
     }
 
     public void registerTools(McpSyncServer mcpServer) {
@@ -57,10 +58,7 @@ public class MessageTools extends BasePulsarTools {
         registerGetMessageBacklog(mcpServer);
         registerSendMessage(mcpServer);
         registerGetMessageStats(mcpServer);
-
-        if (hasClientSupport()) {
-            registerReceiveMessages(mcpServer);
-        }
+        registerReceiveMessages(mcpServer);
     }
 
     private void registerPeekMessage(McpSyncServer mcpServer) {
@@ -376,129 +374,6 @@ public class MessageTools extends BasePulsarTools {
         );
     }
 
-    private void registerSendMessage(McpSyncServer mcpServer) {
-        McpSchema.Tool tool = createTool(
-                "send-message",
-                "Send a message to a specified topic",
-                """
-                {
-                    "type": "object",
-                    "properties": {
-                        "topic": {
-                            "type": "string",
-                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
-                        },
-                        "message": {
-                            "type": "string",
-                            "description": "The message content to send"
-                        },
-                        "key": {
-                            "type": "string",
-                            "description": "Optional message key"
-                        },
-                        "properties": {
-                            "type": "object",
-                            "description": "Optional key-value properties for the message"
-                        }
-                    },
-                    "required": ["topic", "message"]
-                }
-                """
-        );
-
-        mcpServer.addTool(McpServerFeatures.SyncToolSpecification.builder()
-                .tool(tool)
-                .callHandler((exchange, request) -> {
-                    try {
-                        String topic = buildFullTopicName(request.arguments());
-                        String message = getRequiredStringParam(request.arguments(), "message");
-                        String key = getStringParam(request.arguments(), "key");
-
-                        if (hasClientSupport()) {
-                            return sendMessageWithClient(topic, message, key, request.arguments());
-                        } else {
-                            Map<String, Object> result = new HashMap<>();
-                            result.put("topic", topic);
-                            result.put("messageId", message);
-                            result.put("messageSize", message.getBytes().length);
-                            result.put("status", "not_implemented");
-                            result.put("reason", "Message sending requires PulsarClient producer");
-                            if (key != null) {
-                                result.put("key", key);
-                            }
-
-                            addTopicBreakdown(result, topic);
-
-                            return createSuccessResult("Message sent successfully to topic: "
-                                    + topic, result);
-                        }
-
-                    } catch (IllegalArgumentException e) {
-                        return createErrorResult(e.getMessage());
-                    } catch (Exception e) {
-                        LOGGER.error("Unexpected error while sending message", e);
-                        return createErrorResult("Unexpected error: " + e.getMessage());
-                    }
-                }).build()
-        );
-    }
-
-    private McpSchema.CallToolResult sendMessageWithClient(String topic, String messageContent,
-                                                           String key, Map<String, Object> arguments) {
-        ProducerBuilder<byte[]> producerBuilder = pulsarClient.newProducer()
-                .topic(topic)
-                .enableBatching(true)
-                .sendTimeout(30, TimeUnit.SECONDS);
-
-        try (Producer<byte[]> producer = producerBuilder.create()) {
-            TypedMessageBuilder<byte[]> msgBuilder = producer.newMessage()
-                    .value(messageContent.getBytes(StandardCharsets.UTF_8));
-
-            if (key != null && !key.isEmpty()) {
-                msgBuilder.key(key);
-            }
-
-            Object propertiesObj = arguments.get("properties");
-            if (propertiesObj instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> propMap = (Map<String, Object>) propertiesObj;
-                Map<String, String> stringProps = new HashMap<>();
-                propMap.forEach((k, v) -> {
-                    if (v != null) {
-                        stringProps.put(k, v.toString());
-                    }
-                });
-                if (!stringProps.isEmpty()) {
-                    msgBuilder.properties(stringProps);
-                }
-            }
-
-            MessageId messageId = msgBuilder.send();
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("topic", topic);
-            result.put("messageId", messageId.toString());
-            result.put("message", messageContent);
-            if (key != null && !key.isEmpty()) {
-                result.put("key", key);
-            }
-            if (propertiesObj != null) {
-                result.put("properties", propertiesObj);
-            }
-
-            addTopicBreakdown(result, topic);
-
-            return createSuccessResult("Message sent successfully to topic: " + topic, result);
-
-        } catch (PulsarClientException e) {
-            LOGGER.error("Failed to send message", e);
-            return createErrorResult("PulsarClientException: " + e.getMessage());
-        } catch (Exception e) {
-            LOGGER.error("Unexpected error while sending message", e);
-            return createErrorResult("Unexpected error: " + e.getMessage());
-        }
-    }
-
     private void registerGetMessageStats(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
                 "get-message-stats",
@@ -559,6 +434,73 @@ public class MessageTools extends BasePulsarTools {
         );
     }
 
+    private void registerSendMessage(McpSyncServer mcpServer) {
+        McpSchema.Tool tool = createTool(
+                "send-message",
+                "Send a message to a specified topic",
+                """
+                {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "The message content to send"
+                        },
+                        "key": {
+                            "type": "string",
+                            "description": "Optional message key"
+                        },
+                        "properties": {
+                            "type": "object",
+                            "description": "Optional key-value properties for the message"
+                        }
+                    },
+                    "required": ["topic", "message"]
+                }
+                """
+        );
+
+        mcpServer.addTool(McpServerFeatures.SyncToolSpecification.builder()
+                .tool(tool)
+                .callHandler((exchange, request) -> {
+                    try {
+                        String topic = buildFullTopicName(request.arguments());
+                        String message = getRequiredStringParam(request.arguments(), "message");
+                        String key = getStringParam(request.arguments(), "key");
+
+                        try {
+                            return sendMessageWithClient(topic, message, key, request.arguments());
+                        } catch (Exception e) {
+                            Map<String, Object> result = new HashMap<>();
+                            result.put("topic", topic);
+                            result.put("messageId", message);
+                            result.put("messageSize", message.getBytes().length);
+                            result.put("status", "not_implemented");
+                            result.put("reason", "Message sending requires PulsarClient producer");
+                            if (key != null) {
+                                result.put("key", key);
+                            }
+
+                            addTopicBreakdown(result, topic);
+
+                            return createSuccessResult("Message sent successfully to topic: "
+                                    + topic, result);
+                        }
+
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
+                    } catch (Exception e) {
+                        LOGGER.error("Unexpected error while sending message", e);
+                        return createErrorResult("Unexpected error: " + e.getMessage());
+                    }
+                }).build()
+        );
+    }
+
     private void registerReceiveMessages(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
                 "receive-messages",
@@ -604,7 +546,9 @@ public class MessageTools extends BasePulsarTools {
 
                         List<Map<String, Object>> messages = new ArrayList<>();
 
-                        if (pulsarClient != null) {
+                        try {
+                            PulsarClient pulsarClient = getPulsarClient();
+
                             try (Consumer<byte[]> consumer = pulsarClient.newConsumer()
                                     .topic(topic)
                                     .subscriptionName(subscriptionName)
@@ -630,6 +574,10 @@ public class MessageTools extends BasePulsarTools {
                                     consumer.acknowledge(msg);
                                 }
                             }
+                        } catch (Exception clientException) {
+                            LOGGER.error("Failed to receive messages using PulsarClient", clientException);
+                            return createErrorResult("Failed to receive messages - PulsarClient not available: "
+                                    + clientException.getMessage());
                         }
 
                         Map<String, Object> result = new HashMap<>();
@@ -646,9 +594,6 @@ public class MessageTools extends BasePulsarTools {
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult("Invalid input parameter: " + e.getMessage());
-                    } catch (PulsarClientException e) {
-                        LOGGER.error("Failed to receive messages", e);
-                        return createErrorResult("Failed to receive messages: " + e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Unexpected error while receiving messages", e);
                         return createErrorResult("Unexpected error: " + e.getMessage());
@@ -657,4 +602,59 @@ public class MessageTools extends BasePulsarTools {
                 .build());
     }
 
+    private McpSchema.CallToolResult sendMessageWithClient(String topic, String messageContent,
+                                                           String key, Map<String, Object> arguments) throws Exception {
+        PulsarClient pulsarClient = getPulsarClient();
+
+        ProducerBuilder<byte[]> producerBuilder = pulsarClient.newProducer()
+                .topic(topic)
+                .enableBatching(true)
+                .sendTimeout(30, TimeUnit.SECONDS);
+
+        try (Producer<byte[]> producer = producerBuilder.create()) {
+            TypedMessageBuilder<byte[]> msgBuilder = producer.newMessage()
+                    .value(messageContent.getBytes(StandardCharsets.UTF_8));
+
+            if (key != null && !key.isEmpty()) {
+                msgBuilder.key(key);
+            }
+
+            Object propertiesObj = arguments.get("properties");
+            if (propertiesObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> propMap = (Map<String, Object>) propertiesObj;
+                Map<String, String> stringProps = new HashMap<>();
+                propMap.forEach((k, v) -> {
+                    if (v != null) {
+                        stringProps.put(k, v.toString());
+                    }
+                });
+                if (!stringProps.isEmpty()) {
+                    msgBuilder.properties(stringProps);
+                }
+            }
+
+            MessageId messageId = msgBuilder.send();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("topic", topic);
+            result.put("messageId", messageId.toString());
+            result.put("message", messageContent);
+            result.put("status", "sent");
+            if (key != null && !key.isEmpty()) {
+                result.put("key", key);
+            }
+            if (propertiesObj != null) {
+                result.put("properties", propertiesObj);
+            }
+
+            addTopicBreakdown(result, topic);
+
+            return createSuccessResult("Message sent successfully to topic: " + topic, result);
+
+        } catch (PulsarClientException e) {
+            LOGGER.error("Failed to send message", e);
+            throw e; // 重新抛出让上层处理
+        }
+    }
 }

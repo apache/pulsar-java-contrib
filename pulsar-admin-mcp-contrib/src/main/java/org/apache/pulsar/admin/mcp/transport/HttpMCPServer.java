@@ -15,10 +15,8 @@ package org.apache.pulsar.admin.mcp.transport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.server.McpServer;
-import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.transport.HttpServletSseServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.eclipse.jetty.server.Server;
@@ -27,9 +25,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HttpSseMCPServer extends AbstractMCPServer implements Transport {
+public class HttpMCPServer extends AbstractMCPServer implements Transport {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpSseMCPServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(HttpMCPServer.class);
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Server jettyServer;
 
@@ -39,48 +37,39 @@ public class HttpSseMCPServer extends AbstractMCPServer implements Transport {
             logger.warn("Server is already running");
             return;
         }
+
         logger.info("Starting HTTP SSE Pulsar MCP server");
 
-        initializePulsarAdmin();
+        try {
+            initialize(options);
 
-        var objectMapper = new ObjectMapper();
-        var sseTransport = HttpServletSseServerTransportProvider.builder()
-                .objectMapper(objectMapper)
-                .build();
+            var objectMapper = new ObjectMapper();
+            var sseTransport = HttpServletSseServerTransportProvider.builder()
+                    .objectMapper(objectMapper)
+                    .build();
 
-        var mcpServer = McpServer.sync(sseTransport)
-                .serverInfo("pulsar-admin-http-sse", "1.0.0")
-                .capabilities(McpSchema.ServerCapabilities.builder()
-                    .tools(true)
-                    .build())
-                .build();
+            var mcpServer = McpServer.sync(sseTransport)
+                    .serverInfo("pulsar-admin-http-sse", "1.0.0")
+                    .capabilities(McpSchema.ServerCapabilities.builder()
+                            .tools(true)
+                            .build())
+                    .build();
 
-        registerFilteredTools(mcpServer, options);
+            registerFilteredTools(mcpServer, options);
+            startJettyServer(sseTransport, options.getHttpPort());
 
-        startJettyServer(sseTransport, options.getHttpPort());
+            running.set(true);
+            logger.info("HTTP SSE Pulsar MCP server started at http://localhost:{}/mcp/sse", options.getHttpPort());
 
-        running.set(true);
-        logger.info("HTTP SSE Pulsar MCP server started at http://localhost:{}/mcp/sse", options.getHttpPort());
-
-    }
-
-    private void registerFilteredTools(McpSyncServer mcpServer, PulsarMCPCliOptions options) {
-        Set<String> allTools = getAllAvailableTools();
-        Set<String> enableTools = options.getFilteredTools(allTools);
-
-        if (options.isDebug()){
-            logger.info("Enabling filtered tools: {}", enableTools);
+        } catch (Exception e) {
+            logger.error("Failed to start HTTP server", e);
+            throw e;
         }
-
-        registerToolsConditionally(mcpServer, enableTools);
-
-        logger.info("Registered {} tools for HTTP SSE transport", enableTools.size());
-
     }
 
     @Override
     public void stop() throws Exception {
-        if (!running.get()){
+        if (!running.get()) {
             return;
         }
 
@@ -89,6 +78,14 @@ public class HttpSseMCPServer extends AbstractMCPServer implements Transport {
 
         if (jettyServer != null && jettyServer.isRunning()) {
             jettyServer.stop();
+        }
+
+        if (pulsarClientManager != null) {
+            try {
+                pulsarClientManager.close();
+            } catch (Exception e) {
+                logger.warn("Error closing PulsarManager: {}", e.getMessage());
+            }
         }
 
         logger.info("HTTP SSE Pulsar MCP server stopped");
@@ -124,7 +121,7 @@ public class HttpSseMCPServer extends AbstractMCPServer implements Transport {
 
     public static void main(String[] args) {
         try {
-            HttpSseMCPServer transport = new HttpSseMCPServer();
+            HttpMCPServer transport = new HttpMCPServer();
             PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(args);
             transport.start(options);
         } catch (Exception e) {
