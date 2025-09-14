@@ -16,6 +16,7 @@ package org.apache.pulsar.admin.mcp.transport;
 import io.modelcontextprotocol.server.McpSyncServer;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.apache.pulsar.admin.mcp.tools.ClusterTools;
@@ -28,6 +29,8 @@ import org.apache.pulsar.admin.mcp.tools.TenantTools;
 import org.apache.pulsar.admin.mcp.tools.TopicTools;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminBuilder;
+import org.apache.pulsar.client.api.ClientBuilder;
+import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,9 @@ public abstract class AbstractMCPServer {
     protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractMCPServer.class);
     protected PulsarClientManager pulsarClientManager;
     protected static PulsarAdmin pulsarAdmin;
+    protected static PulsarClient pulsarClient;
+    private final AtomicBoolean adminInitialized = new AtomicBoolean();
+    private final AtomicBoolean clientInitialized = new AtomicBoolean();
 
     public void initializePulsarAdmin(PulsarMCPCliOptions options) throws Exception {
         String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
@@ -47,8 +53,8 @@ public abstract class AbstractMCPServer {
                     .connectionTimeout(30, TimeUnit.SECONDS)
                     .readTimeout(60, TimeUnit.SECONDS);
 
-            String authPlugin = System.getProperty("pulsar.auth-plugin");
-            String authParams = System.getProperty("pulsar.auth-params");
+            String authPlugin = System.getProperty("pulsar.auth.plugin");
+            String authParams = System.getProperty("pulsar.auth.params");
             if (authPlugin != null && authParams != null) {
                 adminBuilder.authentication(authPlugin, authParams);
                 LOGGER.info("Authentication configured: {}", authPlugin);
@@ -68,12 +74,39 @@ public abstract class AbstractMCPServer {
         }
     }
 
-    protected PulsarAdmin getPulsarAdmin() throws Exception {
-        return pulsarClientManager.getAdmin();
-    }
+    public void initializePulsarClient(PulsarMCPCliOptions options) throws Exception {
+        String serviceUrl = System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
 
-    protected PulsarClient getPulsarClientManager() throws Exception {
-        return pulsarClientManager.getClient();
+        try {
+            ClientBuilder clientBuilder = PulsarClient.builder()
+                    .serviceUrl(serviceUrl)
+                    .operationTimeout(30, TimeUnit.SECONDS)
+                    .connectionTimeout(30, TimeUnit.SECONDS)
+                    .keepAliveInterval(30, TimeUnit.SECONDS);
+
+            String authPlugin = System.getProperty("pulsar.auth.plugin");
+            String authParams = System.getProperty("pulsar.auth.params");
+            if (authPlugin != null && authParams != null) {
+                clientBuilder.authentication(authPlugin, authParams);
+                LOGGER.info("Authentication configured: {}", authPlugin);
+            }
+
+            pulsarClient = clientBuilder.build();
+
+            try {
+                // 测试连接 - 创建一个简单的生产者来验证连接
+                Producer<byte[]> testProducer = pulsarClient.newProducer()
+                        .topic("persistent://public/default/connection-test")
+                        .create();
+                testProducer.close();
+            } catch (Exception e) {
+                pulsarClient.close();
+                pulsarClient = null;
+                throw new RuntimeException("Cannot connect to Pulsar broker.", e);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to initialize PulsarClient", e);
+        }
     }
 
     protected static void disableLogging() {

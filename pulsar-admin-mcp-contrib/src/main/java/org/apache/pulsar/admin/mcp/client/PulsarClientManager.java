@@ -47,49 +47,111 @@ public class PulsarClientManager implements AutoCloseable {
     }
 
     public synchronized PulsarClient getClient() throws Exception {
-        if (!clientInitialized.get()) {
-            initializePulsarClient();
-        }
+        initializePulsarClient();
         return pulsarClient;
     }
 
     private void initializePulsarAdmin() throws Exception {
-        if (adminInitialized.get()) {
+
+        if (!adminInitialized.compareAndSet(false, true)) {
             return;
         }
 
-        PulsarAdminBuilder adminBuilder = PulsarAdmin.builder()
-                .serviceHttpUrl(config.getAdminUrl())
-                .connectionTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS);
+        boolean success = false;
+        try {
+            String adminUrl = (config != null && config.getAdminUrl() != null && !config.getAdminUrl().isBlank())
+                    ? config.getAdminUrl()
+                    : System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
 
-        if (config.getAuthPlugin() != null && config.getAuthParams() != null) {
-            adminBuilder.authentication(config.getAuthPlugin(), config.getAuthParams());
+            PulsarAdminBuilder adminBuilder = PulsarAdmin.builder()
+                    .serviceHttpUrl(adminUrl)
+                    .connectionTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS);
+
+            String authPlugin = (config != null) ? config.getAuthPlugin() : null;
+            String authParams = (config != null) ? config.getAuthParams() : null;
+            if (authPlugin == null) {
+                authPlugin = System.getProperty("pulsar.auth.plugin");
+            }
+            if (authParams == null) {
+                authParams = System.getProperty("pulsar.auth.params");
+            }
+
+            if (authPlugin != null && authParams != null) {
+                adminBuilder.authentication(authPlugin, authParams);
+                LOGGER.info("Authentication configured: {}", authPlugin);
+            }
+
+            pulsarAdmin = adminBuilder.build();
+
+            pulsarAdmin.clusters().getClusters();
+            success = true;
+
+        } catch (Exception e) {
+
+            if (pulsarAdmin != null) {
+                try {
+                    pulsarAdmin.close();
+                } catch (Exception ignore) {
+
+                }
+                pulsarAdmin = null;
+            }
+            adminInitialized.set(false);
+            throw new RuntimeException("Failed to initialize PulsarAdmin", e);
+        } finally {
+            if (!success) {
+                adminInitialized.set(false);
+            }
         }
-
-        this.pulsarAdmin = adminBuilder.build();
-        pulsarAdmin.clusters().getClusters();
-        adminInitialized.set(true);
     }
 
     private void initializePulsarClient() throws Exception {
-        if (clientInitialized.get()) {
+        if (!clientInitialized.compareAndSet(false, true)) {
             return;
         }
+        boolean success = false;
+        try {
+            String serviceUrl = (config != null && config.getServiceUrl() != null && !config.getServiceUrl().isBlank())
+                    ? config.getServiceUrl()
+                    : System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
 
-        var clientBuilder = PulsarClient.builder()
-                .serviceUrl(config.getServiceUrl())
-                .operationTimeout(30, TimeUnit.SECONDS)
-                .connectionTimeout(30, TimeUnit.SECONDS)
-                .keepAliveInterval(30,  TimeUnit.SECONDS);
+            var clientBuilder = PulsarClient.builder()
+                    .serviceUrl(serviceUrl)
+                    .operationTimeout(30, TimeUnit.SECONDS)
+                    .connectionTimeout(30, TimeUnit.SECONDS)
+                    .keepAliveInterval(30, TimeUnit.SECONDS);
 
-        if (config.getAuthPlugin() != null && config.getAuthParams() != null) {
-            clientBuilder.authentication(config.getAuthPlugin(), config.getAuthParams());
+            String authPlugin = (config != null) ? config.getAuthPlugin() : null;
+            String authParams = (config != null) ? config.getAuthParams() : null;
+            if (authPlugin == null) {
+                authPlugin = System.getProperty("pulsar.auth.plugin");
+            }
+            if (authParams == null) {
+                authParams = System.getProperty("pulsar.auth.params");
+            }
+            if (authPlugin != null && authParams != null) {
+                clientBuilder.authentication(authPlugin, authParams);
+            }
+
+            this.pulsarClient = clientBuilder.build();
+            success = true;
+
+        } catch (Exception e) {
+            if (pulsarClient != null) {
+                try {
+                    pulsarClient.close();
+                } catch (Exception ignore) {
+                }
+                pulsarClient = null;
+            }
+            clientInitialized.set(false);
+            throw new RuntimeException("Failed to initialize PulsarClient", e);
+        } finally {
+            if (!success) {
+                clientInitialized.set(false);
+            }
         }
-
-        this.pulsarClient = clientBuilder.build();
-        clientInitialized.set(true);
-
     }
 
     @Override
