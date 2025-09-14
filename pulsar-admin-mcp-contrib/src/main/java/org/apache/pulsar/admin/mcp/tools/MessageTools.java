@@ -21,9 +21,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.client.api.CompressionType;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
@@ -40,10 +43,32 @@ import org.apache.pulsar.common.policies.data.TopicStats;
 public class MessageTools extends BasePulsarTools {
 
     private final PulsarClientManager pulsarClientManager;
+    private final ConcurrentMap<String, Producer<byte[]>> producerCache = new ConcurrentHashMap<>();
 
     public MessageTools(PulsarAdmin pulsarAdmin, PulsarClientManager pulsarClientManager) {
         super(pulsarAdmin);
         this.pulsarClientManager = pulsarClientManager;
+    }
+
+    protected PulsarClient getClient() throws Exception {
+        return pulsarClientManager.getClient();
+    }
+
+    private Producer<byte[]> getOrCreateProducer(String fullTopic) throws Exception {
+        return producerCache.computeIfAbsent(fullTopic, t -> {
+            try {
+                return getClient().newProducer()
+                        .topic(t)
+                        .enableBatching(true)
+                        .batchingMaxPublishDelay(5, TimeUnit.MILLISECONDS)
+                        .blockIfQueueFull(true)
+                        .compressionType(CompressionType.LZ4)
+                        .sendTimeout(30, TimeUnit.SECONDS)
+                        .create();
+            } catch (Exception e) {
+                throw new RuntimeException("create producer failed for " + t, e);
+            }
+        });
     }
 
     private PulsarClient getPulsarClient() throws Exception {
@@ -440,26 +465,26 @@ public class MessageTools extends BasePulsarTools {
                 "Send a message to a specified topic",
                 """
                 {
-                    "type": "object",
-                    "properties": {
-                        "topic": {
-                            "type": "string",
-                            "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
-                        },
-                        "message": {
-                            "type": "string",
-                            "description": "The message content to send"
-                        },
-                        "key": {
-                            "type": "string",
-                            "description": "Optional message key"
-                        },
-                        "properties": {
-                            "type": "object",
-                            "description": "Optional key-value properties for the message"
-                        }
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name(simple:orders or full:persistent://public/default/orders)"
                     },
-                    "required": ["topic", "message"]
+                    "message": {
+                      "type": "string",
+                      "description": "The message content to send"
+                    },
+                    "key": {
+                      "type": "string",
+                      "description": "Optional message key"
+                    },
+                    "properties": {
+                      "type": "object",
+                      "description": "Optional key-value properties for the message"
+                    }
+                  },
+                  "required": ["topic", "message"]
                 }
                 """
         );
@@ -468,38 +493,42 @@ public class MessageTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String topic = buildFullTopicName(request.arguments());
-                        String message = getRequiredStringParam(request.arguments(), "message");
-                        String key = getStringParam(request.arguments(), "key");
+                        String fullTopic = buildFullTopicName(request.arguments());
+                        String message   = getRequiredStringParam(request.arguments(), "message");
+                        String key       = getStringParam(request.arguments(), "key");
 
-                        try {
-                            return sendMessageWithClient(topic, message, key, request.arguments());
-                        } catch (Exception e) {
-                            Map<String, Object> result = new HashMap<>();
-                            result.put("topic", topic);
-                            result.put("messageId", message);
-                            result.put("messageSize", message.getBytes().length);
-                            result.put("status", "not_implemented");
-                            result.put("reason", "Message sending requires PulsarClient producer");
-                            if (key != null) {
-                                result.put("key", key);
-                            }
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> props = (Map<String, String>) request.arguments()
+                                .getOrDefault("properties", Map.of());
 
-                            addTopicBreakdown(result, topic);
+                        Producer<byte[]> producer = getOrCreateProducer(fullTopic);
 
-                            return createSuccessResult("Message sent successfully to topic: "
-                                    + topic, result);
+                        TypedMessageBuilder<byte[]> builder = producer.newMessage()
+                                .value(message.getBytes(StandardCharsets.UTF_8));
+
+                        if (key != null && !key.isEmpty()) {
+                            builder = builder.key(key);
+                        }
+                        if (props != null && !props.isEmpty()) {
+                            builder = builder.properties(props);
                         }
 
-                    } catch (IllegalArgumentException e) {
-                        return createErrorResult(e.getMessage());
+                        MessageId msgId = builder.send();
+
+                        return createSuccessResult("Message sent", Map.of(
+                                "topic", fullTopic,
+                                "messageId", msgId.toString(),
+                                "messageContent", message,
+                                "bytes", message.getBytes(StandardCharsets.UTF_8).length
+                        ));
+                    } catch (IllegalArgumentException iae) {
+                        return createErrorResult("Invalid arguments: " + iae.getMessage());
                     } catch (Exception e) {
-                        LOGGER.error("Unexpected error while sending message", e);
-                        return createErrorResult("Unexpected error: " + e.getMessage());
+                        return createErrorResult("Failed to send message: " + e.getMessage());
                     }
-                }).build()
-        );
+                }).build());
     }
+
 
     private void registerReceiveMessages(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
@@ -547,7 +576,7 @@ public class MessageTools extends BasePulsarTools {
                         List<Map<String, Object>> messages = new ArrayList<>();
 
                         try {
-                            PulsarClient pulsarClient = getPulsarClient();
+                            PulsarClient pulsarClient =  getPulsarClient();
 
                             try (Consumer<byte[]> consumer = pulsarClient.newConsumer()
                                     .topic(topic)

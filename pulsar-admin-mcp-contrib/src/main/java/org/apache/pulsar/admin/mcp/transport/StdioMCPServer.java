@@ -26,6 +26,10 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
     private static final Logger logger = LoggerFactory.getLogger(StdioMCPServer.class);
     private final AtomicBoolean running = new AtomicBoolean(false);
 
+    public StdioMCPServer() {
+        super();
+    }
+
     @Override
     public void start(PulsarMCPCliOptions options) throws Exception {
         if (running.get()) {
@@ -39,6 +43,7 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
 
         try {
             initializePulsarAdmin(options);
+            initializePulsarClient(options);
         } catch (Exception e) {
             logger.error("Failed to initialize PulsarAdmin", e);
             if (options.isDebug()) {

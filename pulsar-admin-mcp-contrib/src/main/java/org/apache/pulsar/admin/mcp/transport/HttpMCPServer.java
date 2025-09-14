@@ -31,6 +31,10 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Server jettyServer;
 
+    public HttpMCPServer() {
+        super();
+    }
+
     @Override
     public void start(PulsarMCPCliOptions options) throws Exception {
         if (running.get()){
