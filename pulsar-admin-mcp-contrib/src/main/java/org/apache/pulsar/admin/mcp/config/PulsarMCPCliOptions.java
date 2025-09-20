@@ -63,7 +63,7 @@ public class PulsarMCPCliOptions {
     private boolean listTools = false;
 
     private String adminUrl = "http://localhost:8080";
-    private String serviceUrl = "http://localhost:6650";
+    private String serviceUrl = "pulsar://localhost:6650";
     private int httpPort = 8889;
     private boolean debug = false;
 
