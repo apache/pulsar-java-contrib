@@ -16,7 +16,6 @@ package org.apache.pulsar.admin.mcp.transport;
 import io.modelcontextprotocol.server.McpSyncServer;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.apache.pulsar.admin.mcp.tools.ClusterTools;
@@ -41,8 +40,10 @@ public abstract class AbstractMCPServer {
     protected PulsarClientManager pulsarClientManager;
     protected static PulsarAdmin pulsarAdmin;
     protected static PulsarClient pulsarClient;
-    private final AtomicBoolean adminInitialized = new AtomicBoolean();
-    private final AtomicBoolean clientInitialized = new AtomicBoolean();
+
+    public void injectClientManager(PulsarClientManager manager) {
+        this.pulsarClientManager = manager;
+    }
 
     public void initializePulsarAdmin(PulsarMCPCliOptions options) throws Exception {
         String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
@@ -104,6 +105,9 @@ public abstract class AbstractMCPServer {
                 pulsarClient = null;
                 throw new RuntimeException("Cannot connect to Pulsar broker.", e);
             }
+
+            pulsarClientManager = new PulsarClientManager(options);
+
         } catch (Exception e) {
             LOGGER.error("Failed to initialize PulsarClient", e);
         }
