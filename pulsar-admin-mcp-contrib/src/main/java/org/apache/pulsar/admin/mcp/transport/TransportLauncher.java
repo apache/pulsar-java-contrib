@@ -14,6 +14,7 @@
 
 package org.apache.pulsar.admin.mcp.transport;
 
+import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 
 public class TransportLauncher {
@@ -45,11 +46,26 @@ public class TransportLauncher {
     }
 
     private static void startTransport(PulsarMCPCliOptions options) throws Exception {
-
         TransportManager transportManager = new TransportManager();
 
-        transportManager.registerTransport(new StdioMCPServer());
-        transportManager.registerTransport(new HttpMCPServer());
+        StdioMCPServer stdio = new StdioMCPServer();
+        HttpMCPServer http = new HttpMCPServer();
+
+        PulsarClientManager manager = new PulsarClientManager(options);
+        manager.initialize();
+        stdio.injectClientManager(manager);
+        http.injectClientManager(manager);
+
+        transportManager.registerTransport(stdio);
+        transportManager.registerTransport(http);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                manager.close();
+            } catch (Exception ignore) {
+
+            }
+        }, "pulsar-manager-shutdown"));
 
         switch (options.getTransport()) {
             case HTTP -> {
@@ -59,9 +75,9 @@ public class TransportLauncher {
                 transportManager.startTransport(PulsarMCPCliOptions.TransportType.STDIO, options);
             }
             case ALL -> {
-                transportManager.startAllTransports(options);
+                transportManager.startTransport(PulsarMCPCliOptions.TransportType.HTTP, options);
+                transportManager.startTransport(PulsarMCPCliOptions.TransportType.STDIO, options);
             }
         }
     }
-
 }

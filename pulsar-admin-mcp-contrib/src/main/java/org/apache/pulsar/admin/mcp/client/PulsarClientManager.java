@@ -39,6 +39,12 @@ public class PulsarClientManager implements AutoCloseable {
         this.config = config;
     }
 
+    public void initialize() throws Exception {
+        getAdmin();
+        getClient();
+    }
+
+
     public synchronized PulsarAdmin getAdmin() throws Exception {
         if (!adminInitialized.get()) {
             initializePulsarAdmin();
@@ -47,7 +53,9 @@ public class PulsarClientManager implements AutoCloseable {
     }
 
     public synchronized PulsarClient getClient() throws Exception {
-        initializePulsarClient();
+        if (!clientInitialized.get()) {
+            initializePulsarClient();
+        }
         return pulsarClient;
     }
 
