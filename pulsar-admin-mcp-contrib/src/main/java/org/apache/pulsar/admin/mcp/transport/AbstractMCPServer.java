@@ -72,45 +72,16 @@ public abstract class AbstractMCPServer {
             }
         } catch (Exception e) {
             LOGGER.error("Failed to initialize PulsarAdmin", e);
+
         }
     }
 
     public void initializePulsarClient(PulsarMCPCliOptions options) throws Exception {
-        String serviceUrl = System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
+        pulsarClientManager = new PulsarClientManager(options);
+        pulsarClientManager.initialize();
 
-        try {
-            ClientBuilder clientBuilder = PulsarClient.builder()
-                    .serviceUrl(serviceUrl)
-                    .operationTimeout(30, TimeUnit.SECONDS)
-                    .connectionTimeout(30, TimeUnit.SECONDS)
-                    .keepAliveInterval(30, TimeUnit.SECONDS);
-
-            String authPlugin = System.getProperty("pulsar.auth.plugin");
-            String authParams = System.getProperty("pulsar.auth.params");
-            if (authPlugin != null && authParams != null) {
-                clientBuilder.authentication(authPlugin, authParams);
-                LOGGER.info("Authentication configured: {}", authPlugin);
-            }
-
-            pulsarClient = clientBuilder.build();
-
-            try {
-                // 测试连接 - 创建一个简单的生产者来验证连接
-                Producer<byte[]> testProducer = pulsarClient.newProducer()
-                        .topic("persistent://public/default/connection-test")
-                        .create();
-                testProducer.close();
-            } catch (Exception e) {
-                pulsarClient.close();
-                pulsarClient = null;
-                throw new RuntimeException("Cannot connect to Pulsar broker.", e);
-            }
-
-            pulsarClientManager = new PulsarClientManager(options);
-
-        } catch (Exception e) {
-            LOGGER.error("Failed to initialize PulsarClient", e);
-        }
+        pulsarAdmin = pulsarClientManager.getAdmin();
+        pulsarClient = pulsarClientManager.getClient();
     }
 
     protected static void disableLogging() {
@@ -205,14 +176,14 @@ public abstract class AbstractMCPServer {
         try {
             registrationTask.run();
         } catch (NoClassDefFoundError e) {
-            System.err.println(toolGroupName + "dependencies missing" + e.getMessage());
+            LOGGER.error("{} dependencies missing: {}", toolGroupName, e.getMessage());
         } catch (Exception e) {
             if (e.getCause() instanceof ClassNotFoundException) {
-                System.err.println(toolGroupName + "not available in this configuration (class not found)");
+                LOGGER.error("{} not available in this configuration (class not found)", toolGroupName);
             } else {
-                System.err.println(toolGroupName + "dependencies missing" + e.getMessage());
+                LOGGER.error("{} dependencies missing: {}", toolGroupName, e.getMessage());
                 if (Boolean.parseBoolean(System.getProperty("mcp.debug", "false"))) {
-                    e.printStackTrace();
+                    LOGGER.debug("Exception details", e);
                 }
             }
         }

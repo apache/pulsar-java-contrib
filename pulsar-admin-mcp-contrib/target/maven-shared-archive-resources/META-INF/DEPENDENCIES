@@ -55,7 +55,7 @@ From: 'an unknown organization'
     License: Apache License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 From: 'Anthropic' (https://www.anthropic.com)
-  - Java MCP SDK (https://github.com/modelcontextprotocol/java-sdk) io.modelcontextprotocol.sdk:mcp:jar:0.11.0
+  - Java MCP SDK (https://github.com/modelcontextprotocol/java-sdk) io.modelcontextprotocol.sdk:mcp:jar:0.12.0
     License: MIT License  (http://www.opensource.org/licenses/mit-license.php)
 
 From: 'Apache Software Foundation' (https://www.apache.org/)
@@ -91,10 +91,6 @@ From: 'FasterXML' (http://fasterxml.com/)
 From: 'fasterxml.com' (https://fasterxml.com)
   - ClassMate (https://github.com/FasterXML/java-classmate) com.fasterxml:classmate:bundle:1.7.0
     License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
-
-From: 'GlassFish Community' (https://javaee.github.io)
-  - Java Servlet API (https://javaee.github.io/servlet-spec/) javax.servlet:javax.servlet-api:jar:4.0.1
-    License: CDDL + GPLv2 with classpath exception  (https://oss.oracle.com/licenses/CDDL+GPL-1.1)
 
 From: 'Google LLC' (http://www.google.com)
   - error-prone annotations (https://errorprone.info/error_prone_annotations) com.google.errorprone:error_prone_annotations:jar:2.18.0
@@ -159,17 +155,21 @@ From: 'VMware, Inc.' (https://spring.io)
     License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
 
 From: 'Webtide' (https://webtide.com)
-  - Core :: HTTP (https://jetty.org/jetty-core/jetty-http) org.eclipse.jetty:jetty-http:jar:12.0.22
-    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0/)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
-  - Core :: IO (https://jetty.org/jetty-core/jetty-io) org.eclipse.jetty:jetty-io:jar:12.0.22
-    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0/)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
-  - Core :: Security (https://jetty.org/jetty-core/jetty-security) org.eclipse.jetty:jetty-security:jar:12.0.22
-    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0/)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
-  - Jetty :: Server Core (https://eclipse.dev/jetty/jetty-server) org.eclipse.jetty:jetty-server:jar:11.0.18
-    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0/)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
-  - Jetty :: Servlet Handling (https://eclipse.dev/jetty/jetty-servlet) org.eclipse.jetty:jetty-servlet:jar:11.0.18
-    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0/)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
-  - Core :: Utilities (https://jetty.org/jetty-core/jetty-util) org.eclipse.jetty:jetty-util:jar:12.0.22
+  - Jetty :: Http Utility (https://eclipse.org/jetty/jetty-http) org.eclipse.jetty:jetty-http:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Jetty :: IO Utility (https://eclipse.org/jetty/jetty-io) org.eclipse.jetty:jetty-io:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Jetty :: Security (https://eclipse.org/jetty/jetty-security) org.eclipse.jetty:jetty-security:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Jetty :: Server Core (https://eclipse.org/jetty/jetty-server) org.eclipse.jetty:jetty-server:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Jetty :: Servlet Handling (https://eclipse.org/jetty/jetty-servlet) org.eclipse.jetty:jetty-servlet:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Jetty :: Utilities (https://eclipse.org/jetty/jetty-util) org.eclipse.jetty:jetty-util:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Jetty :: Webapp Application Support (https://eclipse.org/jetty/jetty-webapp) org.eclipse.jetty:jetty-webapp:jar:11.0.8
+    License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Core :: XML (https://jetty.org/jetty-core/jetty-xml) org.eclipse.jetty:jetty-xml:jar:12.0.22
     License: Eclipse Public License - Version 2.0  (https://www.eclipse.org/legal/epl-2.0/)    License: Apache Software License - Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
 
 

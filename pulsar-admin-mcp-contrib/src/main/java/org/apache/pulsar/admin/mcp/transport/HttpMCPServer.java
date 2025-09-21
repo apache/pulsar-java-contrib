@@ -104,7 +104,6 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
             }
         }
 
-        // 不在此关闭 pulsarClientManager（避免影响其它传输共用的客户端）
         logger.info("HTTP Streaming Pulsar MCP server stopped");
     }
 
@@ -153,8 +152,7 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
             Thread.currentThread().join();
 
         } catch (Exception e) {
-            System.err.println("Error starting HTTP Streaming Pulsar MCP server: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error starting HTTP Streaming Pulsar MCP server: {}", e.getMessage(), e);
             System.exit(1);
         }
     }

@@ -60,7 +60,7 @@ public class TransportManager {
                     httpTransport.start(options);
                 } catch (Exception e) {
                     if (options.isDebug()) {
-                        e.printStackTrace();
+                        logger.error("Exception in transport", e);
                     }
                 }
             }, executorService);

@@ -56,8 +56,14 @@ public class MessageTools extends BasePulsarTools {
             try {
                 PulsarClient client = getClient();
                 if (client == null) {
-                    throw new RuntimeException("PulsarClient is not available");
+                    throw new RuntimeException("PulsarClient is not available. "
+                            + "Please check your Pulsar connection configuration.");
                 }
+
+                if (client.isClosed()) {
+                    throw new RuntimeException("PulsarClient is closed. Please restart the MCP server.");
+                }
+
                 return client.newProducer()
                         .topic(t)
                         .enableBatching(true)
@@ -70,10 +76,6 @@ public class MessageTools extends BasePulsarTools {
                 throw new RuntimeException("create producer failed for " + t, e);
             }
         });
-    }
-
-    private PulsarClient getPulsarClient() throws Exception {
-        return pulsarClientManager.getClient();
     }
 
     public void registerTools(McpSyncServer mcpServer) {
@@ -577,7 +579,7 @@ public class MessageTools extends BasePulsarTools {
                         List<Map<String, Object>> messages = new ArrayList<>();
 
                         try {
-                            PulsarClient pulsarClient = getPulsarClient();
+                            PulsarClient pulsarClient = getClient();
                             if (pulsarClient == null) {
                                 return createErrorResult("Pulsar Client is not available");
                             }

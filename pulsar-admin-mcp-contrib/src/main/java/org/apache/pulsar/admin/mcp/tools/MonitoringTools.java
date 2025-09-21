@@ -493,7 +493,6 @@ public class MonitoringTools extends BasePulsarTools{
                     }
 
                     try {
-                        // 1. BASIC: Admin API 测试
                         try {
                             String leaderBroker = String.valueOf(pulsarAdmin.brokers().getLeaderBroker());
                             result.put("adminApiReachable", true);
@@ -504,13 +503,11 @@ public class MonitoringTools extends BasePulsarTools{
                             return createErrorResult("Admin API unreachable");
                         }
 
-                        // 如果是 basic 模式，直接返回
                         if ("basic".equals(testType)) {
                             result.put("diagnosticsLevel", "basic");
                             return createSuccessResult("Basic connection check completed", result);
                         }
 
-                        // 2. DETAILED: Producer/Consumer 测试
                         long sendStart = System.nanoTime();
                         MessageId msgId;
                         try (Producer<byte[]> producer = pulsarClient.newProducer()
@@ -559,18 +556,15 @@ public class MonitoringTools extends BasePulsarTools{
 
                         result.put("producerTimeMs", (sendEnd - sendStart) / 1_000_000.0);
 
-                        // 如果是 detailed 模式，返回这里
                         if ("detailed".equals(testType)) {
                             result.put("diagnosticsLevel", "detailed");
                             return createSuccessResult("Detailed connection check completed", result);
                         }
 
-                        // 3. NETWORK: 加延迟和带宽测试
                         if ("network".equals(testType) && receivedMsg != null) {
                             double roundTripMs = (receiveEnd - sendStart) / 1_000_000.0;
                             result.put("roundTripLatencyMs", roundTripMs);
 
-                            // 简单带宽测试（发送固定大小消息多次）
                             int testSize = 1024 * 100; // 100 KB
                             byte[] payload = new byte[testSize];
                             Arrays.fill(payload, (byte) 65);

@@ -146,13 +146,11 @@ public class TenantTools extends BasePulsarTools {
                     try {
                         String tenant = getRequiredStringParam(request.arguments(), "tenant");
 
-                        // 检查是否已存在
                         try {
                             pulsarAdmin.tenants().getTenantInfo(tenant);
                             return createErrorResult("Tenant already exists: " + tenant,
                                     List.of("Choose a different tenant name"));
                         } catch (PulsarAdminException.NotFoundException ignore) {
-                            // 不存在则继续
                         }
 
                         Set<String> adminRoles = getSetParam(request.arguments(), "adminRoles");

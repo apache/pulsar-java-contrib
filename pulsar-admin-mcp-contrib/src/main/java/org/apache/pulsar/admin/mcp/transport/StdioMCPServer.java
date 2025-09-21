@@ -47,7 +47,7 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
         } catch (Exception e) {
             logger.error("Failed to initialize PulsarAdmin", e);
             if (options.isDebug()) {
-                e.printStackTrace(System.err);
+                logger.debug("Exception details", e);
             }
             throw new RuntimeException("Cannot start MCP server without Pulsar connection. "
                     + "Please ensure Pulsar is running at"
@@ -103,8 +103,7 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
             PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(args);
             server.start(options);
         } catch (Exception e) {
-            System.err.println("Error starting Pulsar MCP server: " + e.getMessage());
-            e.printStackTrace(System.err);
+            logger.error("Error starting Pulsar MCP server: {}", e.getMessage(), e);
             System.exit(1);
         }
     }
