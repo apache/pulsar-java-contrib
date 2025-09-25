@@ -56,7 +56,7 @@ public class NamespaceTools extends BasePulsarTools {
                             "description": "The name of the tenant"
                         }
                     },
-                    "required": [""]
+                    "required": []
                 }
                 """
         );
@@ -66,12 +66,20 @@ public class NamespaceTools extends BasePulsarTools {
                 .callHandler((exchange, request) -> {
                     try {
                         String tenant = getStringParam(request.arguments(), "tenant");
-
+                        if (tenant != null) {
+                            tenant = tenant.trim();
+                        }
                         List<String> namespaces;
                         if (tenant != null && !tenant.trim().isEmpty()) {
                             namespaces = pulsarAdmin.namespaces().getNamespaces(tenant);
+                            if (namespaces == null) {
+                                namespaces = List.of();
+                            }
                         } else {
                             List<String> tenants = pulsarAdmin.tenants().getTenants();
+                            if (tenants == null) {
+                                tenants = List.of();
+                            }
                             namespaces = new ArrayList<>();
                             for (String namespace : tenants) {
                                 try {
@@ -89,6 +97,8 @@ public class NamespaceTools extends BasePulsarTools {
 
                         return createSuccessResult("Namespaces retrieved successfully", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult("Invalid parameter: " + e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to list namespaces", e);
                         return createErrorResult("Failed to list namespaces" + e.getMessage());
@@ -142,6 +152,8 @@ public class NamespaceTools extends BasePulsarTools {
                                         getMaxProducersPerTopic(fullNamespace));
 
                         return createSuccessResult("Namespace info retrieved successfully", details);
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult("Invalid parameter: " + e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to get namespace info", e);
                         return createErrorResult("Failed to get namespace info: " + e.getMessage());
@@ -238,8 +250,8 @@ public class NamespaceTools extends BasePulsarTools {
                         boolean force = getBooleanParam(request.arguments(), "force", false);
 
                         String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
 
                         if (isSystemNamespace(namespace)) {
                             return createErrorResult("Cannot delete system namespace: " + namespace);
@@ -304,12 +316,18 @@ public class NamespaceTools extends BasePulsarTools {
                     try {
                         String fullNamespace = resolveNamespace(request.arguments());
 
-                        String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String[] parts = fullNamespace.split("/", 2);
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
+
                         Integer retentionTime = getIntParam(request.arguments(), "retentionTimeInMinutes", -1);
                         Integer retentionSize =  getIntParam(request.arguments(), "retentionSizeInMB", -1);
-
+                        if (retentionTime == null) {
+                            retentionTime = -1;
+                        }
+                        if (retentionSize == null) {
+                            retentionSize = -1;
+                        }
 
                         RetentionPolicies policies = new RetentionPolicies(retentionTime, retentionSize);
                         pulsarAdmin.namespaces().setRetention(fullNamespace, policies);
@@ -360,9 +378,9 @@ public class NamespaceTools extends BasePulsarTools {
                     try {
                         String fullNamespace = resolveNamespace(request.arguments());
 
-                        String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String[] parts = fullNamespace.split("/", 2);
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
 
                         RetentionPolicies policies = pulsarAdmin.namespaces().getRetention(fullNamespace);
 
@@ -378,6 +396,8 @@ public class NamespaceTools extends BasePulsarTools {
                         }
 
                         return createSuccessResult("Retention policy fetched successfully", result);
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to get retention policy", e);
                         return createErrorResult("Failed to get retention policy: " + e.getMessage());
@@ -423,14 +443,14 @@ public class NamespaceTools extends BasePulsarTools {
                     try {
                         String fullNamespace = resolveNamespace(request.arguments());
 
-                        String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String[] parts = fullNamespace.split("/", 2);
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
 
                         Integer limitSize = getIntParam(request.arguments(), "limitSizeInBytes", 0);
                         String policyStr = getRequiredStringParam(request.arguments(), "policy");
 
-                        if (limitSize <= 0) {
+                        if (limitSize == null || limitSize <= 0) {
                             return createErrorResult("Limit size must be greater than 0.");
                         }
 
@@ -467,6 +487,8 @@ public class NamespaceTools extends BasePulsarTools {
 
                         return createSuccessResult("Backlog quota set successfully", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to set backlog quota", e);
                         return createErrorResult("Failed to set backlog quota: " + e.getMessage());
@@ -503,9 +525,9 @@ public class NamespaceTools extends BasePulsarTools {
                     try {
                         String fullNamespace = resolveNamespace(request.arguments());
 
-                        String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String[] parts = fullNamespace.split("/", 2);
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
 
                         Map<BacklogQuota.BacklogQuotaType, BacklogQuota> quotas =
                                 pulsarAdmin.namespaces().getBacklogQuotaMap(fullNamespace);
@@ -514,7 +536,7 @@ public class NamespaceTools extends BasePulsarTools {
                         result.put("tenant", tenant);
                         result.put("namespace", namespace);
 
-                        if (quotas.isEmpty()) {
+                        if (quotas == null || quotas.isEmpty()) {
                             result.put("message", "No backlog quota configured");
                             result.put("quotas", Map.of());
                         } else {
@@ -530,6 +552,8 @@ public class NamespaceTools extends BasePulsarTools {
 
                         return createSuccessResult("Backlog quota retrieved successfully", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to get backlog quota", e);
                         return createErrorResult("Failed to get backlog quota: " + e.getMessage());
@@ -553,6 +577,10 @@ public class NamespaceTools extends BasePulsarTools {
                             "type": "string",
                             "description": "Namespace name or full path ('orders' or 'public/orders')",
                             "default": "default"
+                        },
+                        "subscriptionName": {
+                             "type": "string",
+                             "description": "clear backlog only for this subscription"
                         }
                     },
                     "required": ["tenant", "namespace"]
@@ -566,9 +594,9 @@ public class NamespaceTools extends BasePulsarTools {
                     try {
                         String fullNamespace = resolveNamespace(request.arguments());
 
-                        String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String[] parts = fullNamespace.split("/", 2);
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
                         String subscriptionName = getStringParam(
                                 request.arguments(),
                                 "subscriptionName");
@@ -586,6 +614,8 @@ public class NamespaceTools extends BasePulsarTools {
                         result.put("namespace", namespace);
 
                         return createSuccessResult("Namespace backlog cleared successfully", result);
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to clear namespace backlog", e);
                         return createErrorResult("Failed to clear namespace backlog: " + e.getMessage());
@@ -622,12 +652,15 @@ public class NamespaceTools extends BasePulsarTools {
                     try {
                         String fullNamespace = resolveNamespace(request.arguments());
 
-                        String[] parts = fullNamespace.split("/");
-                        String tenant = parts[0];
-                        String namespace = parts[1];
+                        String[] parts = fullNamespace.split("/", 2);
+                        String tenant = parts.length > 0 ? parts[0] : "";
+                        String namespace = parts.length > 1 ? parts[1] : "";
 
                         List<String> topics = pulsarAdmin.topics().
                                 getList(fullNamespace);
+                        if (topics == null) {
+                            topics = List.of();
+                        }
 
                         long persistentTopics = topics.stream().filter(t ->
                                 t.startsWith("persistent://")).count();
@@ -642,6 +675,8 @@ public class NamespaceTools extends BasePulsarTools {
                         result.put("topics", topics);
 
                         return createSuccessResult("Namespace stats retrieved successfully", result);
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to get namespace stats", e);
                         return createErrorResult("Failed to get namespace stats: " + e.getMessage());

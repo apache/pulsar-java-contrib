@@ -17,11 +17,17 @@ package org.apache.pulsar.admin.mcp.tools;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.spec.McpSchema;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.common.policies.data.ClusterData;
+import org.apache.pulsar.common.policies.data.FailureDomain;
 
 public class ClusterTools extends BasePulsarTools {
 
@@ -87,6 +93,8 @@ public class ClusterTools extends BasePulsarTools {
 
                         return createSuccessResult("Cluster details", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to list clusters", e);
                         return createErrorResult("Failed to list clusters" + e.getMessage());
@@ -102,7 +110,7 @@ public class ClusterTools extends BasePulsarTools {
                 {
                     "type": "object",
                     "properties": {
-                        "cluster": {
+                        "clusterName": {
                             "type": "string",
                             "description": "Name of the cluster to get info about"
                         }
@@ -210,8 +218,10 @@ public class ClusterTools extends BasePulsarTools {
                             pulsarAdmin.clusters().getCluster(clusterName);
                             return createErrorResult("Cluster info retrieved" + clusterName,
                                     List.of("Choose a different cluster name"));
-                        } catch (Exception e){
+                        } catch (PulsarAdminException.NotFoundException ignore) {
 
+                        } catch (PulsarAdminException e) {
+                            return createErrorResult("Failed to verify cluster existence: " + e.getMessage());
                         }
 
                         var clusterDataBuilder = ClusterData.builder()
@@ -316,30 +326,48 @@ public class ClusterTools extends BasePulsarTools {
                                 request.arguments(),
                                 "authenticationParameters");
 
-                        var clusterDataBuilder = ClusterData.builder()
-                                .serviceUrl(serviceUrl);
-
-                        if (serviceUrlTls != null) {
-                            clusterDataBuilder.serviceUrlTls(serviceUrlTls);
-                        }
-                        if (brokerServiceUrl != null) {
-                            clusterDataBuilder.brokerServiceUrl(brokerServiceUrl);
-                        }
-                        if (brokerServiceUrlTls != null) {
-                            clusterDataBuilder.brokerServiceUrlTls(brokerServiceUrlTls);
-                        }
-                        if (proxyServiceUrl != null) {
-                            clusterDataBuilder.proxyServiceUrl(proxyServiceUrl);
-                        }
-                        if (authenticationPlugin != null) {
-                            clusterDataBuilder.authenticationPlugin(authenticationPlugin);
-                        }
-                        if (authenticationParameters != null) {
-                            clusterDataBuilder.authenticationParameters(authenticationParameters);
+                        ClusterData current;
+                        try {
+                            current = pulsarAdmin.clusters().getCluster(clusterName);
+                        } catch (PulsarAdminException.NotFoundException e) {
+                            return createErrorResult("Cluster not found: " + clusterName);
                         }
 
-                        pulsarAdmin.clusters().updateCluster(clusterName, clusterDataBuilder.build());
+                        String finalServiceUrl = (serviceUrl != null && !serviceUrl.isBlank())
+                                ? serviceUrl.trim()
+                                : current.getServiceUrl();
 
+                        var b = ClusterData.builder()
+                                .serviceUrl(finalServiceUrl)
+                                .serviceUrlTls((serviceUrlTls != null
+                                        && !serviceUrlTls.isBlank())
+                                        ? serviceUrlTls
+                                        : current.getServiceUrlTls())
+                                .brokerServiceUrl((brokerServiceUrl != null
+                                        && !brokerServiceUrl.isBlank())
+                                        ? brokerServiceUrl
+                                        : current.getBrokerServiceUrl())
+                                .brokerServiceUrlTls((brokerServiceUrlTls != null
+                                        && !brokerServiceUrlTls.isBlank())
+                                        ? brokerServiceUrlTls
+                                        : current.getBrokerServiceUrlTls())
+                                .proxyServiceUrl((proxyServiceUrl != null
+                                        && !proxyServiceUrl.isBlank())
+                                        ? proxyServiceUrl
+                                        : current.getProxyServiceUrl());
+
+                        if (authenticationPlugin != null && !authenticationPlugin.isBlank()) {
+                            b.authenticationPlugin(authenticationPlugin);
+                        } else if (current.getAuthenticationPlugin() != null) {
+                            b.authenticationPlugin(current.getAuthenticationPlugin());
+                        }
+                        if (authenticationParameters != null && !authenticationParameters.isBlank()) {
+                            b.authenticationParameters(authenticationParameters);
+                        } else if (current.getAuthenticationParameters() != null) {
+                            b.authenticationParameters(current.getAuthenticationParameters());
+                        }
+
+                        pulsarAdmin.clusters().updateCluster(clusterName, b.build());
                         Map<String, Object> result = new HashMap<>();
                         result.put("clusterName", clusterName);
                         result.put("serviceUrl", serviceUrl);
@@ -384,23 +412,42 @@ public class ClusterTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String clusterName = getRequiredStringParam(request.arguments(), "clusterName");
-                        Boolean force = getBooleanParam(request.arguments(), "force", false);
+                        String clusterName = getRequiredStringParam(request.arguments(), "clusterName").trim();
+                        boolean force = getBooleanParam(request.arguments(), "force", false);
 
                         if (!force) {
-                            try {
-                                var namespaces = pulsarAdmin.namespaces().getNamespaces(clusterName);
-                                if (!namespaces.isEmpty()) {
-                                    return createErrorResult(
-                                            "Cluster has active namespaces, Use 'force: true' to delete anyway.",
-                                            List.of(
-                                                    "Set 'force' parameter to true to force deletion",
-                                                    "Or manually delete all namespaces first"
-                                            )
-                                    );
+                            List<String> tenants = pulsarAdmin.tenants().getTenants();
+                            List<String> referencingTenants = new ArrayList<>();
+                            for (String tenant : tenants) {
+                                var info = pulsarAdmin.tenants().getTenantInfo(tenant);
+                                var allowed = info != null ? info.getAllowedClusters() : null;
+                                if (allowed != null && allowed.contains(clusterName)) {
+                                    referencingTenants.add(tenant);
                                 }
-                            } catch (Exception e) {
+                            }
 
+                            List<String> referencingNamespaces = new ArrayList<>();
+                            for (String tenant : tenants) {
+                                var nss = pulsarAdmin.namespaces().getNamespaces(tenant); // 正确：参数是 tenant
+                                for (String ns : nss) {
+                                    var repl = pulsarAdmin.namespaces().getNamespaceReplicationClusters(ns);
+                                    if (repl != null && repl.contains(clusterName)) {
+                                        referencingNamespaces.add(ns);
+                                    }
+                                }
+                            }
+
+                            if (!referencingTenants.isEmpty() || !referencingNamespaces.isEmpty()) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append("Cluster '").append(clusterName)
+                                        .append("' is still referenced. Use 'force: true' to delete anyway.");
+                                if (!referencingTenants.isEmpty()) {
+                                    sb.append(" Referenced by tenants: ").append(referencingTenants);
+                                }
+                                if (!referencingNamespaces.isEmpty()) {
+                                    sb.append(" Referenced by namespaces: ").append(referencingNamespaces);
+                                }
+                                return createErrorResult(sb.toString());
                             }
                         }
 
@@ -475,14 +522,14 @@ public class ClusterTools extends BasePulsarTools {
                 "List all active brokers in a given Pulsar cluster",
                 """
                 {
-                    "type": "object",
-                    "properties": {
-                        "clusterName": {
-                            "type": "string",
-                            "description": "The name of the Pulsar cluster"
-                        }
-                    },
-                    "required": ["clusterName"]
+                  "type": "object",
+                  "properties": {
+                    "clusterName": {
+                      "type": "string",
+                      "description": "The name of the Pulsar cluster"
+                    }
+                  },
+                  "required": ["clusterName"]
                 }
                 """
         );
@@ -491,21 +538,42 @@ public class ClusterTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String clusterName = getRequiredStringParam(request.arguments(), "clusterName");
-                        if (clusterName == null || clusterName.isBlank()) {
-                            return createErrorResult("Missing required parameter: clusterName");
+                        String clusterName = getRequiredStringParam(request.arguments(), "clusterName").trim();
+                        if (clusterName.isEmpty()) {
+                            return createErrorResult("clusterName cannot be blank");
                         }
 
-                        var activeBrokers = pulsarAdmin.brokers().getActiveBrokers(clusterName);
-                        var dynamicBrokers = pulsarAdmin.brokers().getDynamicConfigurationNames();
+                        try {
+                            pulsarAdmin.clusters().getCluster(clusterName);
+                        } catch (PulsarAdminException.NotFoundException e) {
+                            return createErrorResult("Cluster '" + clusterName + "' not found");
+                        }
+
+                        List<String> active = new ArrayList<>(pulsarAdmin.brokers().getActiveBrokers(clusterName));
+                        active.sort(String::compareTo);
+
+                        String leader = null;
+                        try {
+                            leader = String.valueOf(pulsarAdmin.brokers().getLeaderBroker());
+                        } catch (Exception ignore) {}
+
+                        var dynamicConfigNames = pulsarAdmin.brokers().getDynamicConfigurationNames();
+                        List<String> dynamicNamesSorted = dynamicConfigNames == null
+                                ? List.of()
+                                : dynamicConfigNames.stream().sorted().toList();
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("clusterName", clusterName);
-                        result.put("activeBrokers", activeBrokers);
-                        result.put("brokerCount", activeBrokers.size());
-                        result.put("dynamicConfigNames", dynamicBrokers);
+                        result.put("activeBrokers", active);
+                        result.put("brokerCount", active.size());
+                        result.put("leaderBroker", leader);
+                        result.put("dynamicConfigNames", dynamicNamesSorted);
+                        result.put("available", !active.isEmpty());
+                        result.put("timestamp", System.currentTimeMillis());
 
-                        return createSuccessResult("List of active brokers retrieved successfully", result);
+                        String msg = "List of active brokers retrieved successfully"
+                                + (leader != null ? "" : " (leader not available)");
+                        return createSuccessResult(msg, result);
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult(e.getMessage());
@@ -567,17 +635,26 @@ public class ClusterTools extends BasePulsarTools {
     private void registerGetClusterFailureDomain(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
                 "get-cluster-failure-domain",
-                "Get failure domains for a specific Pulsar cluster",
+                "Get failure domain(s) for a specific Pulsar cluster",
                 """
                 {
-                    "type": "object",
-                    "properties": {
-                        "clusterName": {
-                            "type": "string",
-                            "description": "The name of the Pulsar cluster"
-                        }
+                  "type": "object",
+                  "properties": {
+                    "clusterName": {
+                      "type": "string",
+                      "description": "The name of the Pulsar cluster"
                     },
-                    "required": ["clusterName"]
+                    "domainName": {
+                      "type": "string",
+                      "description": "Optional. If set, only this failure domain will be returned"
+                    },
+                    "includeEmpty": {
+                      "type": "boolean",
+                      "description": "Include domains with empty broker list",
+                      "default": true
+                    }
+                  },
+                  "required": ["clusterName"]
                 }
                 """
         );
@@ -586,29 +663,116 @@ public class ClusterTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String clusterName = getRequiredStringParam(request.arguments(), "clusterName");
-                        if (clusterName == null || clusterName.isBlank()) {
-                            return createErrorResult("Missing required parameter: clusterName");
+                        String clusterName = getRequiredStringParam(request.arguments(), "clusterName").trim();
+                        String domainName  = getStringParam(request.arguments(), "domainName");
+                        boolean includeEmpty = getBooleanParam(request.arguments(), "includeEmpty", true);
+
+                        if (clusterName.isEmpty()) {
+                            return createErrorResult("clusterName cannot be blank");
+                        }
+                        if (domainName != null) {
+                            domainName = domainName.trim();
                         }
 
-                        var domains = pulsarAdmin.clusters().getFailureDomains(clusterName);
+                        try {
+                            pulsarAdmin.clusters().getCluster(clusterName);
+                        } catch (PulsarAdminException.NotFoundException e) {
+                            return createErrorResult("Cluster '" + clusterName + "' not found");
+                        }
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("clusterName", clusterName);
-                        result.put("failureDomains", domains);
-                        result.put("available", false);
 
-                        return createSuccessResult("Cluster failure domains retrieved successfully", result);
+                        if (domainName != null && !domainName.isEmpty()) {
+                            try {
+                                FailureDomain fd =
+                                        pulsarAdmin.clusters().getFailureDomain(clusterName, domainName);
+
+                                Set<String> brokers = (fd != null && fd.getBrokers() != null)
+                                        ? new HashSet<>(fd.getBrokers())
+                                        : new HashSet<>();
+
+                                if (!includeEmpty && brokers.isEmpty()) {
+                                    result.put("domains", List.of());
+                                    result.put("domainCount", 0);
+                                    result.put("available", false);
+                                    return createSuccessResult(
+                                            "Domain exists but filtered by includeEmpty=false", result);
+                                }
+
+                                Map<String, Object> item = new HashMap<>();
+                                item.put("domainName", domainName);
+                                item.put("brokers", brokers.stream().sorted().toList());
+                                item.put("brokerCount", brokers.size());
+
+                                result.put("domains", List.of(item));
+                                result.put("domainCount", 1);
+                                result.put("available", true);
+
+                                return createSuccessResult(
+                                        "Cluster failure domain retrieved successfully", result);
+                            } catch (PulsarAdminException.NotFoundException e) {
+                                return createErrorResult(
+                                        "Domain '"
+                                        + domainName
+                                        + "' not found in cluster '"
+                                        + clusterName + "'");
+                            }
+                        } else {
+                            Map<String, FailureDomain> raw =
+                                    pulsarAdmin.clusters().getFailureDomains(clusterName);
+                            if (raw == null) {
+                                raw = Map.of();
+                            }
+
+                            List<Map<String, Object>> domains = new ArrayList<>();
+                            int brokerTotal = 0;
+                            List<String> emptyDomains = new ArrayList<>();
+
+                            for (Map.Entry<String, FailureDomain> e : raw.entrySet()) {
+                                String dn = e.getKey();
+                                Set<String> brokers = (e.getValue() != null && e.getValue().getBrokers() != null)
+                                        ? new HashSet<>(e.getValue().getBrokers())
+                                        : new HashSet<>();
+
+                                if (!includeEmpty && brokers.isEmpty()) {
+                                    emptyDomains.add(dn);
+                                    continue;
+                                }
+                                brokerTotal += brokers.size();
+
+                                Map<String, Object> item = new HashMap<>();
+                                item.put("domainName", dn);
+                                item.put("brokers", brokers.stream().sorted().toList());
+                                item.put("brokerCount", brokers.size());
+                                domains.add(item);
+                            }
+
+                            domains.sort(Comparator.comparing(m -> (String) m.get("domainName")));
+
+                            result.put("domains", domains);
+                            result.put("domainCount", domains.size());
+                            result.put("brokerTotal", brokerTotal);
+                            if (!emptyDomains.isEmpty()) {
+                                result.put("filteredEmptyDomains", emptyDomains.stream().sorted().toList());
+                            }
+                            result.put("available", !domains.isEmpty());
+
+                            String msg = "Cluster failure domains retrieved successfully"
+                                    + (includeEmpty ? "" : " (empty domains filtered)");
+                            return createSuccessResult(msg, result);
+                        }
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult(e.getMessage());
+                    } catch (PulsarAdminException e) {
+                        return createErrorResult("Pulsar admin error: " + e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to get failure domains", e);
                         return createErrorResult("Failed to get failure domains: " + e.getMessage());
                     }
                 })
-                .build()
-        );
+                .build());
     }
 
     private void registerSetClusterFailureDomain(McpSyncServer mcpServer) {
@@ -629,8 +793,11 @@ public class ClusterTools extends BasePulsarTools {
                         },
                         "brokers": {
                             "type": "array",
-                            "items": { "type": "string" },
-                            "description": "List of broker names in this domain (e.g., ['broker-1', 'broker-2'])"
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "List of broker names in this domain (e.g., ['broker-1', 'broker-2'])",
+                            "minItems": 1
                         },
                         "minDomains": {
                             "type": "integer",
@@ -638,10 +805,10 @@ public class ClusterTools extends BasePulsarTools {
                             "default": 1,
                             "minimum": 1
                         },
-                        "disableBrokerAutoRecovery": {
+                        "validateBrokers": {
                             "type": "boolean",
-                            "description": "Whether to disable auto recovery of brokers in this domain (optional)",
-                            "default": false
+                            "description": "Validate brokers exist & not used in other domains (optional)",
+                            "default": true
                         }
                     },
                     "required": ["clusterName", "domainName", "brokers"]
@@ -653,48 +820,100 @@ public class ClusterTools extends BasePulsarTools {
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String clusterName = getRequiredStringParam(
-                                request.arguments(),
-                                "clusterName");
-                        String domainName = getRequiredStringParam(
-                                request.arguments(),
-                                "domainName");
-                        Integer minDomains = getIntParam(
-                                request.arguments(),
-                                "minDomains", 1);
-                        Boolean disableBrokerAutoRecovery = getBooleanParam(
-                                request.arguments(),
-                                "disableBrokerAutoRecovery", false);
+                        String clusterName  = getRequiredStringParam(request.arguments(), "clusterName").trim();
+                        String domainName   = getRequiredStringParam(request.arguments(), "domainName").trim();
+                        Integer minDomains  = getIntParam(request.arguments(), "minDomains", 1);
+                        boolean validate    = getBooleanParam(request.arguments(),
+                                "validateBrokers", true);
 
                         Object brokersObj = request.arguments().get("brokers");
-                        if (brokersObj instanceof List) {
-                            return createErrorResult("Missing required parameter: brokers");
+                        if (!(brokersObj instanceof List<?> rawList)) {
+                            return createErrorResult("Parameter 'brokers' must be a non-empty string list");
                         }
-
-                        @SuppressWarnings("unchecked")
-                        List<String> brokers = (List<String>) brokersObj;
-
+                        List<String> brokers = new ArrayList<>(rawList.size());
+                        for (int i = 0; i < rawList.size(); i++) {
+                            Object v = rawList.get(i);
+                            if (!(v instanceof String s) || (s = s.trim()).isEmpty()) {
+                                return createErrorResult("All brokers must be non-empty strings" + i);
+                            }
+                            brokers.add(s);
+                        }
+                        if (brokers.isEmpty()) {
+                            return createErrorResult("brokers list cannot be empty");
+                        }
                         if (minDomains < 1) {
-                            return createErrorResult("minDomains must be at least 1",
-                                    List.of("Set minDomains to tolerate 1"));
+                            return createErrorResult("minDomains must be at least 1");
                         }
 
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("clusterName", clusterName);
-                        result.put("domainName", domainName);
-                        result.put("brokers", brokers);
-                        result.put("minDomains", minDomains);
-                        result.put("disableBrokerAutoRecovery", disableBrokerAutoRecovery);
-                        result.put("message", "Failure domain configuration prepared");
-                        result.put("set", false);
+                        try {
+                            pulsarAdmin.clusters().getCluster(clusterName);
+                            Set<String> brokerSet = new HashSet<>(brokers);
+                            Map<String, FailureDomain> existing =
+                                    pulsarAdmin.clusters().getFailureDomains(clusterName);
 
-                        return createSuccessResult("Failure domain set successfully", result);
+                            if (validate) {
+                                for (Map.Entry<String, FailureDomain> e : existing.entrySet()) {
+                                    String dn = e.getKey();
+                                    if (dn.equals(domainName)) {
+                                        continue;
+                                    }
+                                    Set<String> used = e.getValue().getBrokers();
+                                    for (String b : brokerSet) {
+                                        if (used != null && used.contains(b)) {
+                                            return createErrorResult("broker '"
+                                                    + b + "' already belongs to domain '"
+                                                    + dn + "'");
+                                        }
+                                    }
+                                }
+                            }
+
+                            boolean isUpdate = existing.containsKey(domainName);
+
+                            FailureDomain domainObj;
+                            domainObj = FailureDomain
+                                    .builder().brokers(brokerSet).build();
+
+                            if (isUpdate) {
+                                pulsarAdmin.clusters().updateFailureDomain(clusterName, domainName, domainObj);
+                            } else {
+                                pulsarAdmin.clusters().createFailureDomain(clusterName, domainName, domainObj);
+                            }
+
+                            FailureDomain resultDomain =
+                                    pulsarAdmin.clusters().getFailureDomain(clusterName, domainName);
+
+                            boolean minMet = false;
+                            try {
+                                Map<String, FailureDomain> after =
+                                        pulsarAdmin.clusters().getFailureDomains(clusterName);
+                                minMet = after != null && after.size() >= minDomains;
+                            } catch (Exception ignore) {}
+
+                            Map<String, Object> result = new HashMap<>();
+                            result.put("clusterName", clusterName);
+                            result.put("domainName", domainName);
+                            result.put("brokers", new ArrayList<>(brokers));
+                            result.put("actualBrokers", new ArrayList<>(resultDomain.getBrokers())); // 真正生效
+                            result.put("operation", isUpdate ? "update" : "create");
+                            result.put("set", true);
+                            result.put("timestamp", System.currentTimeMillis());
+                            result.put("minDomains", minDomains);
+                            result.put("minDomainsMet", minMet);
+
+                            String msg = "Failure domain " + (isUpdate ? "updated" : "created") + " successfully"
+                                    + (minMet ? "" : " (warning: minDomains not met)");
+                            return createSuccessResult(msg, result);
+
+                        } catch (PulsarAdminException e) {
+                            return createErrorResult("Pulsar admin error: " + e.getMessage());
+                        }
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult(e.getMessage());
                     } catch (Exception e) {
-                        LOGGER.error("Failed to set failure domain", e);
-                        return createErrorResult("Failed to set failure domain: " + e.getMessage());
+                        LOGGER.error("Failed to process set failure domain request", e);
+                        return createErrorResult("Failed to process request: " + e.getMessage());
                     }
                 })
                 .build());

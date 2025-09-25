@@ -16,7 +16,9 @@ package org.apache.pulsar.admin.mcp.tools;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.spec.McpSchema;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.pulsar.client.admin.PulsarAdmin;
@@ -39,8 +41,9 @@ public class SubscriptionTools extends BasePulsarTools{
         registerResetSubscriptionCursor(mcpServer);
         registerExpireSubscriptionMessages(mcpServer);
         registerUnsubscribe(mcpServer);
-        registerPauseSubscription(mcpServer);
-        registerResumeSubscription(mcpServer);
+        registerListSubscriptionConsumers(mcpServer);
+        registerGetSubscriptionCursorPositions(mcpServer);
+
     }
 
     private void registerListSubscriptions(McpSyncServer mcpServer) {
@@ -115,9 +118,13 @@ public class SubscriptionTools extends BasePulsarTools{
                         String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
 
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        if (meta.partitions > 0) {
+                            return createErrorResult("Please specify a concrete partition, e.g. topic-partition-0");
+                        }
+
                         TopicStats stats = pulsarAdmin.topics().getStats(topic);
                         SubscriptionStats subStats = stats.getSubscriptions().get(subscription);
-
                         if (subStats == null) {
                             return createErrorResult("Subscription not found: " + subscription);
                         }
@@ -184,6 +191,16 @@ public class SubscriptionTools extends BasePulsarTools{
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         String messageId = getStringParam(request.arguments(), "messageId");
 
+                        String pos = messageId == null ? "latest" : messageId.trim().toLowerCase();
+                        switch (pos) {
+                            case "latest" ->
+                                    pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
+                            case "earliest" ->
+                                    pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.earliest);
+                            default -> {
+                                return createErrorResult("messageId must be 'latest' or 'earliest'");
+                            }
+                        }
                         if (messageId == null || messageId.equals("latest")) {
                             pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
                         } else if (messageId.equals("earliest")) {
@@ -239,14 +256,12 @@ public class SubscriptionTools extends BasePulsarTools{
                     try {
                         String topic = buildFullTopicName(request.arguments());
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
-                        Boolean force =  getBooleanParam(request.arguments(), "force", false);
 
                         pulsarAdmin.topics().deleteSubscription(topic, subscription);
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
                         result.put("subscription", subscription);
-                        result.put("force", force);
                         result.put("deleted", true);
 
                         addTopicBreakdown(result, topic);
@@ -351,11 +366,9 @@ public class SubscriptionTools extends BasePulsarTools{
                         String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
                         Long timestamp = getLongParam(request.arguments(), "timestamp", 0L);
-
                         if (timestamp <= 0) {
-                            timestamp = System.currentTimeMillis() - (365L * 24 * 60 * 1000);
+                            timestamp = 0L;
                         }
-
                         pulsarAdmin.topics().resetCursor(topic, subscriptionName, timestamp);
 
                         Map<String, Object> result = new HashMap<>();
@@ -380,7 +393,7 @@ public class SubscriptionTools extends BasePulsarTools{
     private void registerExpireSubscriptionMessages(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
                 "expire-subscription-messages",
-                "Expire messages for a subscription up to a specific message ID",
+                "Expire messages for a subscription older than the given seconds",
                 """
                 {
                     "type": "object",
@@ -396,7 +409,8 @@ public class SubscriptionTools extends BasePulsarTools{
                         "expireTimeSeconds": {
                             "type": "integer",
                             "description": "Expire messages older than this time in seconds",
-                            "default": "0"
+                            "default": "0",
+                            "minimum": 0
                         }
                     },
                     "required": ["topic", "subscriptionName"]
@@ -415,14 +429,10 @@ public class SubscriptionTools extends BasePulsarTools{
                         pulsarAdmin.topics().expireMessages(topic, subscriptionName, expireTimeSeconds);
 
                         Map<String, Object> result = new HashMap<>();
-                        result.put("topic",
-                                topic);
-                        result.put("subscriptionName",
-                                subscriptionName);
-                        result.put("expireTimeSeconds",
-                                expireTimeSeconds);
-                        result.put("expired",
-                                true);
+                        result.put("topic", topic);
+                        result.put("subscriptionName", subscriptionName);
+                        result.put("expireTimeSeconds", expireTimeSeconds);
+                        result.put("expired", true);
 
                         addTopicBreakdown(result, topic);
 
@@ -488,24 +498,24 @@ public class SubscriptionTools extends BasePulsarTools{
                 }).build());
     }
 
-    private void registerPauseSubscription(McpSyncServer mcpServer) {
+    private void registerListSubscriptionConsumers(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
-                "pause-subscription",
-                "Pause message delivery for a subscription on a topic",
+                "list-subscription-consumers",
+                "List consumers of a subscription, with per-consumer metrics;",
                 """
                 {
-                    "type": "object",
-                    "properties": {
-                        "topic": {
-                            "type": "string",
-                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
-                        },
-                        "subscriptionName": {
-                            "type": "string",
-                            "description": "The name of the subscription to pause"
-                        }
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                     },
-                    "required": ["topic", "subscriptionName"]
+                    "subscriptionName": {
+                      "type": "string",
+                      "description": "Subscription name to inspect"
+                    }
+                  },
+                  "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -515,44 +525,92 @@ public class SubscriptionTools extends BasePulsarTools{
                 .callHandler((exchange, request) -> {
                     try {
                         String topic = buildFullTopicName(request.arguments());
-                        String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
+                        String subscription = getRequiredStringParam(request.arguments(), "subscriptionName");
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
-                        result.put("subscriptionName", subscriptionName);
-                        result.put("paused", true);
+                        result.put("subscriptionName", subscription);
+                        result.put("timestamp", System.currentTimeMillis());
+
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        List<Map<String, Object>> consumers = new ArrayList<>();
+
+                        if (meta.partitions > 0) {
+                            var ps = pulsarAdmin.topics().getPartitionedStats(topic, true);
+                            ps.getPartitions().forEach((partition, ts) -> {
+                                var subStats = ts.getSubscriptions() != null
+                                        ? ts.getSubscriptions().get(subscription) : null;
+                                if (subStats != null && subStats.getConsumers() != null) {
+                                    for (var c : subStats.getConsumers()) {
+                                        Map<String, Object> one = new HashMap<>();
+                                        one.put("partition", partition);
+                                        one.put("consumerName", c.getConsumerName());
+                                        one.put("address", c.getAddress());
+                                        one.put("connectedSince", c.getConnectedSince());
+                                        one.put("msgRateOut", c.getMsgRateOut());
+                                        one.put("msgThroughputOut", c.getMsgThroughputOut());
+                                        one.put("availablePermits", c.getAvailablePermits());
+                                        one.put("unackedMessages", c.getUnackedMessages());
+                                        consumers.add(one);
+                                    }
+                                }
+                            });
+                        } else {
+                            var stats = pulsarAdmin.topics().getStats(topic);
+                            var subStats = stats.getSubscriptions() != null
+                                    ? stats.getSubscriptions().get(subscription) : null;
+                            if (subStats == null) {
+                                return createErrorResult("Subscription not found: " + subscription);
+                            }
+                            if (subStats.getConsumers() != null) {
+                                for (var c : subStats.getConsumers()) {
+                                    Map<String, Object> one = new HashMap<>();
+                                    one.put("consumerName", c.getConsumerName());
+                                    one.put("address", c.getAddress());
+                                    one.put("connectedSince", c.getConnectedSince());
+                                    one.put("msgRateOut", c.getMsgRateOut());
+                                    one.put("msgThroughputOut", c.getMsgThroughputOut());
+                                    one.put("availablePermits", c.getAvailablePermits());
+                                    one.put("unackedMessages", c.getUnackedMessages());
+                                    consumers.add(one);
+                                }
+                            }
+                        }
+
+                        result.put("consumerCount", consumers.size());
+                        result.put("consumers", consumers);
 
                         addTopicBreakdown(result, topic);
-
-                        return createSuccessResult("Subscription paused successfully", result);
+                        return createSuccessResult("Subscription consumers retrieved", result);
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult(e.getMessage());
                     } catch (Exception e) {
-                        LOGGER.error("Failed to pause subscription", e);
-                        return createErrorResult("Failed to pause subscription: " + e.getMessage());
+                        LOGGER.error("Failed to list subscription consumers", e);
+                        return createErrorResult("Failed to list subscription consumers: " + e.getMessage());
                     }
-                }).build());
+                })
+                .build());
     }
 
-    private void registerResumeSubscription(McpSyncServer mcpServer) {
+    private void registerGetSubscriptionCursorPositions(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
-                "resume-subscription",
-                "Resume message delivery for a paused subscription on a topic",
+                "get-subscription-cursor-positions",
+                "Get cursor positions (markDelete/read) of a subscription; supports partitioned topics",
                 """
                 {
-                    "type": "object",
-                    "properties": {
-                        "topic": {
-                            "type": "string",
-                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
-                        },
-                        "subscriptionName": {
-                            "type": "string",
-                            "description": "The name of the subscription to resume"
-                        }
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name (simple: 'orders' or full: 'persistent://public/default/orders')"
                     },
-                    "required": ["topic", "subscriptionName"]
+                    "subscriptionName": {
+                      "type": "string",
+                      "description": "Subscription name to inspect"
+                    }
+                  },
+                  "required": ["topic", "subscriptionName"]
                 }
                 """
         );
@@ -562,26 +620,74 @@ public class SubscriptionTools extends BasePulsarTools{
                 .callHandler((exchange, request) -> {
                     try {
                         String topic = buildFullTopicName(request.arguments());
-                        String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
-
-//                        pulsarAdmin.topics().resumeSubscription(topic, subscriptionName);
+                        String subscription = getRequiredStringParam(request.arguments(), "subscriptionName");
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
-                        result.put("subscriptionName", subscriptionName);
-                        result.put("resumed", true);
+                        result.put("subscriptionName", subscription);
+                        result.put("timestamp", System.currentTimeMillis());
+
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        Map<String, Object> positions = new LinkedHashMap<>();
+                        int found = 0;
+
+                        if (meta.partitions > 0) {
+                            var ps = pulsarAdmin.topics().getPartitionedStats(topic, true);
+                            for (String partition : ps.getPartitions().keySet()) {
+                                try {
+                                    var internal = pulsarAdmin.topics().getInternalStats(partition);
+                                    if (internal != null && internal.cursors != null
+                                            && internal.cursors.containsKey(subscription)) {
+                                        var cur = internal.cursors.get(subscription);
+                                        Map<String, Object> info = new HashMap<>();
+                                        info.put("markDeletePosition", cur.markDeletePosition);
+                                        info.put("readPosition", cur.readPosition);
+                                        info.put("messagesConsumedCounter", cur.messagesConsumedCounter);
+                                        positions.put(partition, info);
+                                        found++;
+                                    } else {
+                                        positions.put(partition,
+                                                Map.of("message", "cursor not found on this partition"));
+                                    }
+                                } catch (Exception ie) {
+                                    positions.put(partition, Map.of("error", ie.getMessage()));
+                                }
+                            }
+                        } else {
+                            var internal = pulsarAdmin.topics().getInternalStats(topic);
+                            if (internal != null && internal.cursors != null
+                                    && internal.cursors.containsKey(subscription)) {
+                                var cur = internal.cursors.get(subscription);
+                                Map<String, Object> info = new HashMap<>();
+                                info.put("markDeletePosition", cur.markDeletePosition);
+                                info.put("readPosition", cur.readPosition);
+                                info.put("messagesConsumedCounter", cur.messagesConsumedCounter);
+                                positions.put(topic, info);
+                                found = 1;
+                            } else {
+                                return createErrorResult("Cursor not found for subscription: " + subscription);
+                            }
+                        }
+
+                        result.put("foundOnPartitions", found);
+                        result.put("positions", positions);
 
                         addTopicBreakdown(result, topic);
 
-                        return createSuccessResult("Subscription resumed successfully", result);
+                        return createSuccessResult("Subscription cursor positions retrieved", result);
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult(e.getMessage());
                     } catch (Exception e) {
-                        LOGGER.error("Failed to resume subscription", e);
-                        return createErrorResult("Failed to resume subscription: " + e.getMessage());
+                        LOGGER.error("Failed to get subscription cursor positions", e);
+                        return createErrorResult("Failed to get subscription cursor positions: " + e.getMessage());
                     }
-                }).build());
+                })
+                .build());
     }
+
+
+
+
 
 }

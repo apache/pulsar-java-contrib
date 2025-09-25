@@ -28,8 +28,6 @@ import org.apache.pulsar.admin.mcp.tools.TenantTools;
 import org.apache.pulsar.admin.mcp.tools.TopicTools;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminBuilder;
-import org.apache.pulsar.client.api.ClientBuilder;
-import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +43,7 @@ public abstract class AbstractMCPServer {
         this.pulsarClientManager = manager;
     }
 
-    public void initializePulsarAdmin(PulsarMCPCliOptions options) throws Exception {
+    public void initializePulsarAdmin() {
         String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
 
         try {
@@ -84,21 +82,8 @@ public abstract class AbstractMCPServer {
         pulsarClient = pulsarClientManager.getClient();
     }
 
-    protected static void disableLogging() {
-        System.setProperty("slf4j.internal.verbosity", "WARN");
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "OFF");
-        System.setProperty("logging.level.root", "OFF");
-        System.setProperty("logging.level.io.modelcontextprotocol", "OFF");
-        System.setProperty("org.eclipse.jetty.LEVEL", "WARN");
-    }
-
     protected void registerFilteredTools(McpSyncServer mcpServer, PulsarMCPCliOptions options) {
         Set<String> enabledTools = options.getFilteredTools(getAllAvailableTools());
-
-        if (options.isDebug()) {
-            LOGGER.info("Enabling tools: {}", enabledTools);
-        }
-
         try {
             registerToolsConditionally(mcpServer, enabledTools, pulsarClientManager);
         } catch (Exception e) {

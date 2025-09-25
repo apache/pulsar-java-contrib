@@ -16,7 +16,9 @@ package org.apache.pulsar.admin.mcp.tools;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.spec.McpSchema;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.common.policies.data.TopicStats;
@@ -73,7 +75,10 @@ public class TopicTools extends BasePulsarTools {
                     try {
                         String namespace = resolveNamespace(request.arguments());
 
-                        var topics = pulsarAdmin.topics().getList(namespace);
+                        List<String> topics = pulsarAdmin.topics().getList(namespace);
+                        if (topics == null) {
+                            topics = List.of();
+                        }
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("namespace", namespace);
@@ -95,7 +100,7 @@ public class TopicTools extends BasePulsarTools {
                 "create-topics",
                 "Create one or more topics under a specific namespace",
                 """
-                        {
+                      {
                             "type": "object",
                             "properties": {
                                 "namespace": {
@@ -104,12 +109,8 @@ public class TopicTools extends BasePulsarTools {
                                     "default": "default"
                                 },
                                 "topic": {
-                                    "type": "string",
-                                    "description": "Topic name(simple:orders/full:persistent://public/default/orders)",
-                                    "items": {
-                                        "type": "string"
-                                    },
-                                    "minItems": 1
+                                     "type": "string",
+                                     "description": "Topic name('orders' or 'persistent://public/default/orders')"
                                 },
                                 "persistent": {
                                     "type": "boolean",
@@ -123,8 +124,8 @@ public class TopicTools extends BasePulsarTools {
                                 }
                             },
                             "required": ["topic"]
-                        }
-                        """
+                      }
+                      """
         );
 
         mcpServer.addTool(McpServerFeatures.SyncToolSpecification.builder()
@@ -132,6 +133,14 @@ public class TopicTools extends BasePulsarTools {
                 .callHandler((exchange, request) -> {
                     try {
                         String topic = buildFullTopicName(request.arguments());
+
+                        boolean persistent = getBooleanParam(request.arguments(), "persistent", true);
+                        if (topic.startsWith("persistent://") && !persistent) {
+                            topic = "non-" + topic;
+                        } else if (topic.startsWith("non-persistent://") && persistent) {
+                            topic = topic.replaceFirst("non-persistent://", "persistent://");
+                        }
+
                         Integer partitions = getIntParam(request.arguments(), "partitions", 0);
 
                         if (partitions > 0) {
@@ -177,11 +186,7 @@ public class TopicTools extends BasePulsarTools {
                         },
                         "topic": {
                             "type": "string",
-                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')",
-                            "items": {
-                                "type": "string"
-                            },
-                            "minItems": 1
+                            "description": "Topic name(simple:'orders' or full:'persistent://public/default/orders')"
                         },
                         "force": {
                             "type": "boolean",
@@ -206,7 +211,12 @@ public class TopicTools extends BasePulsarTools {
                         String topic = buildFullTopicName(request.arguments());
                         Boolean force = getBooleanParam(request.arguments(), "force", false);
 
-                        pulsarAdmin.topics().delete(topic, force);
+                        var metadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        if (metadata != null && metadata.partitions > 0) {
+                            pulsarAdmin.topics().deletePartitionedTopic(topic, force);
+                        } else {
+                            pulsarAdmin.topics().delete(topic, force);
+                        }
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
@@ -250,18 +260,31 @@ public class TopicTools extends BasePulsarTools {
                     try {
                         String topic = buildFullTopicName(request.arguments());
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
-
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
-                        result.put("msgRateIn", stats.getMsgRateIn());
-                        result.put("msgRateOut", stats.getMsgRateOut());
-                        result.put("msgThroughputIn", stats.getMsgThroughputIn());
-                        result.put("msgThroughputOut", stats.getMsgThroughputOut());
-                        result.put("storageSize", stats.getStorageSize());
-                        result.put("subscriptions", stats.getSubscriptions());
-                        result.put("publishers", stats.getPublishers());
-                        result.put("replication", stats.getReplication());
+
+                        if (meta != null && meta.partitions > 0) {
+                            var ps = pulsarAdmin.topics().getPartitionedStats(topic, false);
+                            result.put("msgRateIn", ps.getMsgRateIn());
+                            result.put("msgRateOut", ps.getMsgRateOut());
+                            result.put("msgThroughputIn", ps.getMsgThroughputIn());
+                            result.put("msgThroughputOut", ps.getMsgThroughputOut());
+                            result.put("storageSize", ps.getStorageSize());
+                            result.put("subscriptions", null);
+                            result.put("publishers", null);
+                            result.put("replication", null);
+                        } else {
+                            TopicStats stats = pulsarAdmin.topics().getStats(topic);
+                            result.put("msgRateIn", stats.getMsgRateIn());
+                            result.put("msgRateOut", stats.getMsgRateOut());
+                            result.put("msgThroughputIn", stats.getMsgThroughputIn());
+                            result.put("msgThroughputOut", stats.getMsgThroughputOut());
+                            result.put("storageSize", stats.getStorageSize());
+                            result.put("subscriptions", stats.getSubscriptions()); // 可能为 null，直接透传
+                            result.put("publishers", stats.getPublishers());
+                            result.put("replication", stats.getReplication());
+                        }
 
                         return createSuccessResult("Topic stats retrieved successfully", result);
                     } catch (IllegalArgumentException e) {
@@ -298,11 +321,12 @@ public class TopicTools extends BasePulsarTools {
                         String topic = buildFullTopicName(request.arguments());
 
                         var metadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        int partitions = (metadata == null) ? 0 : metadata.partitions;
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
-                        result.put("partitions", metadata.partitions);
-                        result.put("isPartitioned", metadata.partitions > 0);
+                        result.put("partitions", partitions);
+                        result.put("isPartitioned", partitions > 0);
 
                         return createSuccessResult("Topic metadata fetched successfully", result);
                     } catch (IllegalArgumentException e) {
@@ -415,9 +439,14 @@ public class TopicTools extends BasePulsarTools {
                 .callHandler((exchange, request) -> {
                     try {
                         String topic = buildFullTopicName(request.arguments());
-
-                        pulsarAdmin.topics().triggerCompaction(topic);
-
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        if (meta != null && meta.partitions > 0) {
+                            for (int i = 0; i < meta.partitions; i++) {
+                                pulsarAdmin.topics().triggerCompaction(topic + "-partition-" + i);
+                            }
+                        } else {
+                            pulsarAdmin.topics().triggerCompaction(topic);
+                        }
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
                         result.put("compactionTriggered", true);
@@ -458,7 +487,14 @@ public class TopicTools extends BasePulsarTools {
                     try {
                         String topic = buildFullTopicName(request.arguments());
 
-                        pulsarAdmin.topics().unload(topic);
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        if (meta != null && meta.partitions > 0) {
+                            for (int i = 0; i < meta.partitions; i++) {
+                                pulsarAdmin.topics().unload(topic + "-partition-" + i);
+                            }
+                        } else {
+                            pulsarAdmin.topics().unload(topic);
+                        }
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
@@ -576,10 +612,19 @@ public class TopicTools extends BasePulsarTools {
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
                         Integer expireTimeInSeconds = getIntParam(request.arguments(), "expireTimeInSeconds", 0);
 
-                        if (expireTimeInSeconds > 0) {
-                            pulsarAdmin.topics().expireMessages(topic, subscriptionName, expireTimeInSeconds);
+                        if (expireTimeInSeconds == null || expireTimeInSeconds <= 0) {
+                            return createErrorResult("expireTimeInSeconds must be > 0");
+                        }
+
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                        if (meta != null && meta.partitions > 0) {
+                            for (int i = 0; i < meta.partitions; i++) {
+                                pulsarAdmin.topics().expireMessages(topic
+                                        + "-partition-"
+                                        + i, subscriptionName, expireTimeInSeconds);
+                            }
                         } else {
-                            pulsarAdmin.topics().expireMessagesForAllSubscriptions(topic, expireTimeInSeconds);
+                            pulsarAdmin.topics().expireMessages(topic, subscriptionName, expireTimeInSeconds);
                         }
 
                         Map<String, Object> result = new HashMap<>();
@@ -635,8 +680,30 @@ public class TopicTools extends BasePulsarTools {
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         Integer count = getIntParam(request.arguments(), "count", 1);
 
-                        var messages = pulsarAdmin.topics()
-                                .peekMessages(topic, subscription, count);
+                        if (count == null || count <= 0) {
+                            return createErrorResult("count must be >= 1");
+                        }
+
+                        var raw = pulsarAdmin.topics().peekMessages(topic, subscription, count);
+                        List<Map<String, Object>> messages = new ArrayList<>();
+                        if (raw != null) {
+                            for (var msg : raw) {
+                                Map<String, Object> m = new HashMap<>();
+                                try {
+                                    m.put("messageId", String.valueOf(msg.getMessageId()));
+                                    m.put("publishTime", msg.getPublishTime());
+                                    m.put("eventTime", msg.getEventTime());
+                                    m.put("key", msg.getKey());
+                                    m.put("properties", msg.getProperties());
+                                    byte[] payload = msg.getData();
+                                    m.put("payloadBase64", payload == null
+                                            ? null : java.util.Base64.getEncoder().encodeToString(payload));
+                                } catch (Throwable t) {
+                                    m.put("error", "Failed to materialize message: " + t.getMessage());
+                                }
+                                messages.add(m);
+                            }
+                        }
 
                         Map<String, Object> results = new HashMap<>();
                         results.put("topic", topic);
@@ -692,7 +759,11 @@ public class TopicTools extends BasePulsarTools {
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         Long timestamp = getLongParam(request.arguments(), "timestamp", 0L);
 
-                        if (timestamp <= 0){
+                        if (timestamp == null) {
+                            timestamp = 0L;
+                        }
+
+                        if (timestamp <= 0L){
                             pulsarAdmin.topics().resetCursor(topic, subscription, 0L);
                         } else {
                             pulsarAdmin.topics().resetCursor(topic, subscription, timestamp);
@@ -774,7 +845,7 @@ public class TopicTools extends BasePulsarTools {
                                 cursorInfo.put("cursorLedger", cursor.cursorLedger);
                                 cursors.put(name, cursorInfo);
                             });
-                            result.put("cursors", internalStats.cursors);
+                            result.put("cursors", cursors);
                         }
                         addTopicBreakdown(result, topic);
                         return createSuccessResult("Internal stats retrieved successfully", result);
@@ -817,34 +888,50 @@ public class TopicTools extends BasePulsarTools {
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
-                        result.put("partitions", partitionedMetadata.partitions);
-                        result.put("isPartitioned", partitionedMetadata.partitions > 0);
 
-                        if (partitionedMetadata.partitions > 0) {
-                            try {
-                               var partitionStats = pulsarAdmin.topics().getPartitionedStats(topic, true);
-                                result.put("msgRateIn", partitionStats.getMsgRateIn());
-                                result.put("msgRateOut", partitionStats.getMsgRateOut());
-                                result.put("msgThroughputIn", partitionStats.getMsgThroughputIn());
-                                result.put("msgThroughputOut", partitionStats.getMsgThroughputOut());
-                                result.put("storageSize", partitionStats.getStorageSize());
+                        int partitions = (partitionedMetadata == null) ? 0 : partitionedMetadata.partitions;
+                        result.put("partitions", partitions);
+                        result.put("isPartitioned", partitions > 0);
 
-                                Map<String, Object> partitionInfo = new HashMap<>();
+                        if (partitions > 0) {
+                            double msgRateIn = 0.0, msgRateOut = 0.0, msgThroughputIn = 0.0, msgThroughputOut = 0.0;
+                            long storageSize = 0L;
+                            Map<String, Object> partitionInfo = new HashMap<>();
 
-                                partitionStats.getPartitions().forEach((partition, stats) -> {
+                            for (int i = 0; i < partitions; i++) {
+                                String p = topic + "-partition-" + i;
+                                try {
+                                    TopicStats s = pulsarAdmin.topics().getStats(p);
+                                    if (s == null) {
+                                        continue;
+                                    }
+                                    msgRateIn += s.getMsgRateIn();
+                                    msgRateOut += s.getMsgRateOut();
+                                    msgThroughputIn += s.getMsgThroughputIn();
+                                    msgThroughputOut += s.getMsgThroughputOut();
+                                    storageSize += s.getStorageSize();
+
                                     Map<String, Object> partStats = new HashMap<>();
-                                    partStats.put("msgRateIn", stats.getMsgRateIn());
-                                    partStats.put("msgRateOut", stats.getMsgRateOut());
-                                    partStats.put("storageSize", stats.getStorageSize());
-                                    partStats.put("subscriptionCount", stats.getSubscriptions().size());
-                                    partitionInfo.put(partition, partStats);
-                                });
-                                result.put("partitionStats", partitionInfo);
-
-                            } catch (Exception e) {
-                                result.put("statsError",
-                                        "Could not retrieve partition statistics");
+                                    partStats.put("msgRateIn", s.getMsgRateIn());
+                                    partStats.put("msgRateOut", s.getMsgRateOut());
+                                    partStats.put("storageSize", s.getStorageSize());
+                                    int subCount = (s.getSubscriptions() == null)
+                                            ? 0 : s.getSubscriptions().size();
+                                    partStats.put("subscriptionCount", subCount);
+                                    partitionInfo.put(p, partStats);
+                                } catch (Exception ex) {
+                                    Map<String, Object> err = new HashMap<>();
+                                    err.put("error", "Failed to get stats: " + ex.getMessage());
+                                    partitionInfo.put(p, err);
+                                }
                             }
+
+                            result.put("msgRateIn", msgRateIn);
+                            result.put("msgRateOut", msgRateOut);
+                            result.put("msgThroughputIn", msgThroughputIn);
+                            result.put("msgThroughputOut", msgThroughputOut);
+                            result.put("storageSize", storageSize);
+                            result.put("partitionStats", partitionInfo);
                         } else {
                             result.put("message", "Topic is not partitioned");
                         }

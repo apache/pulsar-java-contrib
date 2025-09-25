@@ -82,8 +82,8 @@ public class SchemaTools extends BasePulsarTools{
                         result.put("properties", schemaInfo.getProperties());
 
                         return createSuccessResult("Schema info retrieved successfully", result);
-                    } catch (org.apache.pulsar.client.admin.PulsarAdminException.NotFoundException e) {
-                        return createErrorResult("Schema not found for topic");
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult("Invalid parameter: " + e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to get schema info", e);
                         return createErrorResult("Failed to get schema info: " + e.getMessage());
@@ -252,10 +252,22 @@ public class SchemaTools extends BasePulsarTools{
                                     List.of("Valid types: AVRO, JSON, STRING, PROTOBUF, BYTES"));
                         }
 
+                        Map<String, String> props = null;
+                        Object pObj = request.arguments().get("properties");
+                        if (pObj instanceof Map<?, ?> m) {
+                            props = new HashMap<>();
+                            for (Map.Entry<?, ?> en : m.entrySet()) {
+                                if (en.getKey() != null && en.getValue() != null) {
+                                    props.put(String.valueOf(en.getKey()), String.valueOf(en.getValue()));
+                                }
+                            }
+                        }
+
                         SchemaInfo schemaInfo = SchemaInfo.builder()
                                 .name(topic)
                                 .type(schemaType)
                                 .schema(schemaStr.getBytes(StandardCharsets.UTF_8))
+                                .properties(props)
                                 .build();
 
                         pulsarAdmin.schemas().createSchema(topic, schemaInfo);
@@ -264,7 +276,7 @@ public class SchemaTools extends BasePulsarTools{
                         result.put("topic", topic);
                         result.put("schema", schemaStr);
                         result.put("schemaType", schemaTypeStr);
-                        result.put("uploade", true);
+                        result.put("uploaded", true);
 
                         addTopicBreakdown(result, topic);
 
@@ -380,8 +392,8 @@ public class SchemaTools extends BasePulsarTools{
                                 .schema(schemaStr.getBytes(StandardCharsets.UTF_8))
                                 .build();
 
-                        var compatibilityResponse = pulsarAdmin.schemas().testCompatibility(topic, schemaInfo);
-                        boolean isCompatible = compatibilityResponse.isCompatibility();
+                        boolean isCompatible = pulsarAdmin.schemas()
+                                .testCompatibility(topic, schemaInfo).isCompatibility();
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);

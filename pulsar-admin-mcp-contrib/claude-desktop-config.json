@@ -10,7 +10,7 @@
       ],
       "cwd": "E:\\projects2\\pulsar-admin-mcp-contrib",
       "env": {
-        "PULSAR_SERVER_URL": "http://localhost:6650",
+        "PULSAR_SERVICE_URL": "http://localhost:6650",
         "PULSAR_ADMIN_URL": "http://localhost:8080"
       }
     }

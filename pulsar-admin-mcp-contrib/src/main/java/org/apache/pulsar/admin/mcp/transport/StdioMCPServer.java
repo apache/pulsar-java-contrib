@@ -37,18 +37,11 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
             return;
         }
 
-        if (!options.isDebug()) {
-            disableLogging();
-        }
-
         try {
-            initializePulsarAdmin(options);
+//            initializePulsarAdmin();
             initializePulsarClient(options);
         } catch (Exception e) {
             logger.error("Failed to initialize PulsarAdmin", e);
-            if (options.isDebug()) {
-                logger.debug("Exception details", e);
-            }
             throw new RuntimeException("Cannot start MCP server without Pulsar connection. "
                     + "Please ensure Pulsar is running at"
                     + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
