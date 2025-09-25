@@ -20,20 +20,7 @@ public class Main {
     public static void main(String[] args) {
         try {
             PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(args);
-
-            if (options.isHelp()) {
-                PulsarMCPCliOptions.printUsage();
-                return;
-            }
-
-            if (options.isListTools()) {
-//                PulsarMCPCliOptions.printAvailable();
-                return;
-            }
-
             TransportLauncher.start(options);
-        } catch (IllegalArgumentException e) {
-
         } catch (Exception e) {
             System.exit(-1);
         }

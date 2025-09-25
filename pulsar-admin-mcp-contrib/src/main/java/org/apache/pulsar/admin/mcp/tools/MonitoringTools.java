@@ -31,6 +31,7 @@ import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.SubscriptionType;
+import org.apache.pulsar.common.policies.data.PublisherStats;
 import org.apache.pulsar.common.policies.data.SubscriptionStats;
 import org.apache.pulsar.common.policies.data.TopicStats;
 
@@ -45,7 +46,6 @@ public class MonitoringTools extends BasePulsarTools{
         registerMonitorClusterPerformance(mcpServer);
         registerMonitorSubscriptionPerformance(mcpServer);
         registerMonitorTopicPerformance(mcpServer);
-
         registerHealthCheck(mcpServer);
         registerConnectionDiagnostics(mcpServer);
         registerBacklogAnalysis(mcpServer);
@@ -90,9 +90,15 @@ public class MonitoringTools extends BasePulsarTools{
                 .tool(tool)
                 .callHandler((exchange, request) -> {
                     try {
-                        String clusterName = getStringParam(request.arguments(), "cluster");
-                        boolean includeDetails = getBooleanParam(request.arguments(), "includeDetails", false);
-
+                        String clusterName = getStringParam(request.arguments(), "clusterName");
+                        boolean includeBrokerStats = getBooleanParam(request.arguments(), "includeBrokerStats", true);
+                        int maxTopics = getIntParam(request.arguments(), "maxTopics", 10);
+                        if (maxTopics < 1) {
+                            maxTopics = 1;
+                        }
+                        if (maxTopics > 50) {
+                            maxTopics = 50;
+                        }
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("timestamp", System.currentTimeMillis());
@@ -101,6 +107,9 @@ public class MonitoringTools extends BasePulsarTools{
                         if (clusterName == null || !clusters.isEmpty()) {
                             clusterName = clusters.get(0);
                         }
+                        if (clusterName == null || clusterName.isBlank()) {
+                            return createErrorResult("clusterName is required and no clusters found");
+                        }
                         result.put("clusterName", clusterName);
 
                         try {
@@ -108,13 +117,14 @@ public class MonitoringTools extends BasePulsarTools{
                             result.put("activeBrokers", brokers.size());
                             result.put("brokerList", brokers);
 
-                            if (includeDetails) {
+                            if (includeBrokerStats) {
                                 Map<String, Object> brokerStats = new HashMap<>();
                                 for (String broker : brokers) {
                                     try {
                                         brokerStats.put(broker, Map.of("status", "active"));
                                     } catch (Exception e) {
-                                        brokerStats.put(broker, Map.of("status", "error", "error", e.getMessage()));
+                                        brokerStats.put(broker, Map.of("status", "error", "error",
+                                                e.getMessage()));
                                     }
                                 }
                                 result.put("brokerStats", brokerStats);
@@ -123,10 +133,11 @@ public class MonitoringTools extends BasePulsarTools{
                             result.put("brokerError", e.getMessage());
                         }
 
-                        result.put("clusterHealth", "healthy");
+                        result.put("clusterHealth", result.containsKey("brokerError") ? "error" : "healthy");
+                        return createSuccessResult("Cluster performance monitoring completed", result);
 
-                        return createSuccessResult("Cluster performace monitoring completed", result);
-
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         return createErrorResult("Failed to monitor cluster performance:" + e.getMessage());
                     }
@@ -186,87 +197,142 @@ public class MonitoringTools extends BasePulsarTools{
                         result.put("topic", topic);
 
                         try {
-                            var stats = pulsarAdmin.topics().getStats(topic);
+                            var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+                            double msgRateIn = 0.0, msgRateOut = 0.0, msgThroughputIn = 0.0, msgThroughputOut = 0.0;
+                            long storageSize = 0L;
+                            double averageMsgSize = 0.0;
+                            int avgCount = 0;
 
-                            result.put("msgRateIn", stats.getMsgRateIn());
-                            result.put("msgRateOut", stats.getMsgRateOut());
-                            result.put("msgThroughputIn", stats.getMsgThroughputIn());
-                            result.put("msgThroughputOut", stats.getMsgThroughputOut());
-                            result.put("storageSize", stats.getStorageSize());
-                            result.put("averageMsgSize", stats.getAverageMsgSize());
+                            Map<String, SubscriptionStats> subMapAgg = new HashMap<>();
+                            List<PublisherStats> publishersAgg = new ArrayList<>();
 
-                            result.put("publishersCount", stats.getPublishers().size());
-                            result.put("subscriptionsCount", stats.getSubscriptions().size());
+                            if (meta != null && meta.partitions > 0) {
+                                for (int i = 0; i < meta.partitions; i++) {
+                                    var s = pulsarAdmin.topics().getStats(topic + "-partition-" + i);
+                                    msgRateIn += s.getMsgRateIn();
+                                    msgRateOut += s.getMsgRateOut();
+                                    msgThroughputIn += s.getMsgThroughputIn();
+                                    msgThroughputOut += s.getMsgThroughputOut();
+                                    storageSize += s.getStorageSize();
+                                    if (s.getAverageMsgSize() > 0) {
+                                        averageMsgSize += s.getAverageMsgSize();
+                                        avgCount++;
+                                    }
 
-                            int totalConsumers = stats.getSubscriptions().values().stream()
-                                    .mapToInt(sub -> sub.getConsumers().size()).sum();
+                                    if (s.getSubscriptions() != null) {
+                                        s.getSubscriptions().forEach((k, v) ->
+                                                subMapAgg.merge(k, v, (a, b) -> {
+                                            return b;
+                                        }));
+                                    }
+                                    if (s.getPublishers() != null) {
+                                        publishersAgg.addAll(s.getPublishers());
+                                    }
+                                }
+                            } else {
+                                var s = pulsarAdmin.topics().getStats(topic);
+                                msgRateIn = s.getMsgRateIn();
+                                msgRateOut = s.getMsgRateOut();
+                                msgThroughputIn = s.getMsgThroughputIn();
+                                msgThroughputOut = s.getMsgThroughputOut();
+                                storageSize = s.getStorageSize();
+                                averageMsgSize = s.getAverageMsgSize();
+                                avgCount = (averageMsgSize > 0) ? 1 : 0;
+                                if (s.getSubscriptions() != null) {
+                                    subMapAgg.putAll(s.getSubscriptions());
+                                }
+                                if (s.getPublishers() != null) {
+                                    publishersAgg.addAll(s.getPublishers());
+                                }
+                            }
+
+                            result.put("msgRateIn", msgRateIn);
+                            result.put("msgRateOut", msgRateOut);
+                            result.put("msgThroughputIn", msgThroughputIn);
+                            result.put("msgThroughputOut", msgThroughputOut);
+                            result.put("storageSize", storageSize);
+                            result.put("averageMsgSize", avgCount == 0 ? 0.0 : (averageMsgSize / avgCount));
+
+                            int publishersCount = publishersAgg == null ? 0 : publishersAgg.size();
+                            int subscriptionsCount = subMapAgg == null ? 0 : subMapAgg.size();
+                            result.put("publishersCount", publishersCount);
+                            result.put("subscriptionsCount", subscriptionsCount);
+
+                            int totalConsumers = 0;
+                            long totalBacklog = 0L;
+                            if (subMapAgg != null) {
+                                for (var sub : subMapAgg.values()) {
+                                    if (sub.getConsumers() != null) {
+                                        totalConsumers += sub.getConsumers().size();
+                                    }
+                                    totalBacklog += sub.getMsgBacklog();
+                                }
+                            }
                             result.put("totalConsumers", totalConsumers);
-
-                            long totalBacklog = stats.getSubscriptions().values().stream()
-                                    .mapToLong(sub -> sub.getMsgBacklog()).sum();
                             result.put("totalBacklog", totalBacklog);
 
-                            if (includeDetails) {
+                            if (includeDetails && subMapAgg != null) {
                                 Map<String, Object> subscriptionStats = new HashMap<>();
-                                List<String> subscriptionNames = new ArrayList<>(stats.getSubscriptions().keySet());
-
+                                List<String> subscriptionNames = new ArrayList<>(subMapAgg.keySet());
                                 if (subscriptionNames.size() > maxSubscriptions) {
                                     subscriptionNames = subscriptionNames.subList(0, maxSubscriptions);
                                 }
-
                                 for (String subName : subscriptionNames) {
-                                    var sub = stats.getSubscriptions().get(subName);
+                                    var sub = subMapAgg.get(subName);
                                     Map<String, Object> subDetail = new HashMap<>();
                                     subDetail.put("msgRateOut", sub.getMsgRateOut());
                                     subDetail.put("msgThroughputOut", sub.getMsgThroughputOut());
                                     subDetail.put("msgBacklog", sub.getMsgBacklog());
                                     subDetail.put("msgRateExpired", sub.getMsgRateExpired());
-                                    subDetail.put("consumersCount", sub.getConsumers().size());
+                                    subDetail.put("consumersCount", sub.getConsumers() == null
+                                            ? 0 : sub.getConsumers().size());
                                     subDetail.put("type", sub.getType());
 
                                     List<Map<String, Object>> consumerDetails = new ArrayList<>();
-                                    for (var consumer : sub.getConsumers()) {
-                                        Map<String, Object> consumerInfo = new HashMap<>();
-                                        consumerInfo.put("consumerName", consumer.getConsumerName());
-                                        consumerInfo.put("msgRateOut", consumer.getMsgRateOut());
-                                        consumerInfo.put("msgThroughputOut", consumer.getMsgThroughputOut());
-                                        consumerInfo.put("availablePermits", consumer.getAvailablePermits());
-                                        consumerInfo.put("unackedMessages", consumer.getUnackedMessages());
-                                        consumerDetails.add(consumerInfo);
+                                    if (sub.getConsumers() != null) {
+                                        for (var consumer : sub.getConsumers()) {
+                                            Map<String, Object> consumerInfo = new HashMap<>();
+                                            consumerInfo.put("consumerName", consumer.getConsumerName());
+                                            consumerInfo.put("msgRateOut", consumer.getMsgRateOut());
+                                            consumerInfo.put("msgThroughputOut", consumer.getMsgThroughputOut());
+                                            consumerInfo.put("availablePermits", consumer.getAvailablePermits());
+                                            consumerInfo.put("unackedMessages", consumer.getUnackedMessages());
+                                            consumerDetails.add(consumerInfo);
+                                        }
                                     }
                                     subDetail.put("consumers", consumerDetails);
                                     subscriptionStats.put(subName, subDetail);
                                 }
                                 result.put("subscriptionStats", subscriptionStats);
 
-                                // Publisher details
                                 List<Map<String, Object>> publisherDetails = new ArrayList<>();
-                                for (var publisher : stats.getPublishers()) {
-                                    Map<String, Object> pubInfo = new HashMap<>();
-                                    pubInfo.put("producerName", publisher.getProducerName());
-                                    pubInfo.put("msgRateIn", publisher.getMsgRateIn());
-                                    pubInfo.put("msgThroughputIn", publisher.getMsgThroughputIn());
-                                    pubInfo.put("averageMsgSize", publisher.getAverageMsgSize());
-                                    publisherDetails.add(pubInfo);
+                                if (publishersAgg != null) {
+                                    for (var publisher : publishersAgg) {
+                                        Map<String, Object> pubInfo = new HashMap<>();
+                                        pubInfo.put("producerName", publisher.getProducerName());
+                                        pubInfo.put("msgRateIn", publisher.getMsgRateIn());
+                                        pubInfo.put("msgThroughputIn", publisher.getMsgThroughputIn());
+                                        pubInfo.put("averageMsgSize", publisher.getAverageMsgSize());
+                                        publisherDetails.add(pubInfo);
+                                    }
                                 }
                                 result.put("publisherDetails", publisherDetails);
                             }
 
                             if (includeInternalStats) {
                                 try {
-                                    var internalStats = pulsarAdmin.topics().getInternalStats(topic);
+                                    var internalStats = (meta != null && meta.partitions > 0)
+                                            ? pulsarAdmin.topics().getInternalStats(topic + "-partition-0")
+                                            : pulsarAdmin.topics().getInternalStats(topic);
                                     Map<String, Object> internal = new HashMap<>();
                                     internal.put("numberOfEntries", internalStats.numberOfEntries);
                                     internal.put("totalSize", internalStats.totalSize);
                                     internal.put("currentLedgerEntries", internalStats.currentLedgerEntries);
                                     internal.put("currentLedgerSize", internalStats.currentLedgerSize);
-                                    internal.put("ledgerCount",
-                                            internalStats.ledgers != null
-                                                    ? internalStats.ledgers.size()
-                                                    : 0);
-                                    internal.put("cursorCount", internalStats.cursors != null
-                                            ? internalStats.cursors.size()
-                                            : 0);
+                                    internal.put("ledgerCount", internalStats.ledgers == null
+                                            ? 0 : internalStats.ledgers.size());
+                                    internal.put("cursorCount", internalStats.cursors == null
+                                            ? 0 : internalStats.cursors.size());
                                     result.put("internalStats", internal);
                                 } catch (Exception e) {
                                     result.put("internalStatsError", e.getMessage());
@@ -277,18 +343,17 @@ public class MonitoringTools extends BasePulsarTools{
                             result.put("statsError", e.getMessage());
                         }
 
-                        // Calculate topic health
                         String topicHealth = "healthy";
                         if (result.containsKey("statsError")) {
                             topicHealth = "error";
                         } else {
-                            Long totalBacklog = (Long) result.get("totalBacklog");
-                            Double msgRateIn = (Double) result.get("msgRateIn");
-                            Double msgRateOut = (Double) result.get("msgRateOut");
-
-                            if (totalBacklog != null && totalBacklog > 100000) {
+                            Long totalBacklogVal = (Long) result.get("totalBacklog");
+                            Double msgRateInVal = (Double) result.get("msgRateIn");
+                            Double msgRateOutVal = (Double) result.get("msgRateOut");
+                            if (totalBacklogVal != null && totalBacklogVal > 100_000) {
                                 topicHealth = "backlog_high";
-                            } else if (msgRateIn != null && msgRateOut != null && msgRateIn > msgRateOut * 1.5) {
+                            } else if (msgRateInVal != null && msgRateOutVal != null
+                                    && msgRateInVal > msgRateOutVal * 1.5) {
                                 topicHealth = "consumption_slow";
                             }
                         }
@@ -297,6 +362,8 @@ public class MonitoringTools extends BasePulsarTools{
                         addTopicBreakdown(result, topic);
                         return createSuccessResult("Topic performance monitoring completed", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         return createErrorResult("Failed to monitor topic performance: " + e.getMessage());
                     }
@@ -333,25 +400,60 @@ public class MonitoringTools extends BasePulsarTools{
                         String topic = buildFullTopicName(request.arguments());
                         String subscriptionName = getRequiredStringParam(request.arguments(), "subscriptionName");
 
-                        TopicStats stats = pulsarAdmin.topics().getStats(topic);
-                        var subStats = stats.getSubscriptions().get(subscriptionName);
+                        var meta = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
 
-                        if (subStats == null) {
-                            return createErrorResult("Subscription not found: " + subscriptionName);
+                        long msgBacklog = 0L;
+                        double msgRateOut = 0.0, msgThroughputOut = 0.0;
+                        int consumersCount = 0;
+                        boolean blockedOnUnacked = false;
+                        Object subscriptionType = null;
+
+                        if (meta != null && meta.partitions > 0) {
+                            for (int i = 0; i < meta.partitions; i++) {
+                                var stats = pulsarAdmin.topics().getStats(topic + "-partition-" + i);
+                                var sub = (stats.getSubscriptions() == null)
+                                        ? null : stats.getSubscriptions().get(subscriptionName);
+                                if (sub == null) {
+                                    continue;
+                                }
+
+                                msgBacklog += sub.getMsgBacklog();
+                                msgRateOut += sub.getMsgRateOut();
+                                msgThroughputOut += sub.getMsgThroughputOut();
+                                consumersCount += (sub.getConsumers() == null ? 0 : sub.getConsumers().size());
+                                blockedOnUnacked = blockedOnUnacked || sub.isBlockedSubscriptionOnUnackedMsgs();
+                                if (subscriptionType == null) {
+                                    subscriptionType = sub.getType();
+                                }
+                            }
+                            if (msgBacklog == 0 && consumersCount == 0 && subscriptionType == null) {
+                                return createErrorResult("Subscription not found: " + subscriptionName);
+                            }
+                        } else {
+                            TopicStats stats = pulsarAdmin.topics().getStats(topic);
+                            var subscriptions = stats.getSubscriptions();
+                            if (subscriptions == null || !subscriptions.containsKey(subscriptionName)) {
+                                return createErrorResult("Subscription not found: " + subscriptionName);
+                            }
+                            var sub = subscriptions.get(subscriptionName);
+                            msgBacklog = sub.getMsgBacklog();
+                            msgRateOut = sub.getMsgRateOut();
+                            msgThroughputOut = sub.getMsgThroughputOut();
+                            consumersCount = (sub.getConsumers() == null ? 0 : sub.getConsumers().size());
+                            blockedOnUnacked = sub.isBlockedSubscriptionOnUnackedMsgs();
+                            subscriptionType = sub.getType();
                         }
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
                         result.put("subscriptionName", subscriptionName);
                         result.put("timestamp", System.currentTimeMillis());
-
-                        result.put("msgBacklog", subStats.getMsgBacklog());
-                        result.put("msgRateOut", subStats.getMsgRateOut());
-                        result.put("msgThroughputOut", subStats.getMsgThroughputOut());
-                        result.put("consumersCount", subStats.getConsumers().size());
-                        result.put("blockedSubscriptionOnUnackedMsgs", subStats.isBlockedSubscriptionOnUnackedMsgs());
-                        result.put("subscriptionType", subStats.getType());
-
+                        result.put("msgBacklog", msgBacklog);
+                        result.put("msgRateOut", msgRateOut);
+                        result.put("msgThroughputOut", msgThroughputOut);
+                        result.put("consumersCount", consumersCount);
+                        result.put("blockedSubscriptionOnUnackedMsgs", blockedOnUnacked);
+                        result.put("subscriptionType", subscriptionType);
 
                         addTopicBreakdown(result, topic);
                         return createSuccessResult("Subscription performance retrieved", result);
@@ -360,8 +462,7 @@ public class MonitoringTools extends BasePulsarTools{
                         return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to monitor subscription performance", e);
-                        return createErrorResult("Failed to monitor subscription performance: "
-                                + e.getMessage());
+                        return createErrorResult("Failed to monitor subscription performance: " + e.getMessage());
                     }
                 }).build());
     }
@@ -507,65 +608,66 @@ public class MonitoringTools extends BasePulsarTools{
                             result.put("diagnosticsLevel", "basic");
                             return createSuccessResult("Basic connection check completed", result);
                         }
+                        String subName = "connection-diagnostics-sub-" + System.currentTimeMillis();
+                        String sentPayload = "connection-test-" + System.currentTimeMillis();
 
-                        long sendStart = System.nanoTime();
-                        MessageId msgId;
-                        try (Producer<byte[]> producer = pulsarClient.newProducer()
-                                .topic(testTopic)
-                                .enableBatching(false)
-                                .sendTimeout(5, TimeUnit.SECONDS)
-                                .create()) {
+                        long sendStartNs;
+                        long sendEndNs;
+                        long receiveEndNs = 0L;
 
-                            String testMessage = "connection-test-" + System.currentTimeMillis();
-                            msgId = producer.newMessage()
-                                    .value(testMessage.getBytes(StandardCharsets.UTF_8))
-                                    .send();
-                            result.put("clientProducerReachable", true);
-                            result.put("testMessageId", msgId.toString());
-                        } catch (Exception e) {
-                            result.put("clientProducerReachable", false);
-                            result.put("clientProducerError", e.getMessage());
-                            return createErrorResult("Producer test failed");
-                        }
-
-                        long sendEnd = System.nanoTime();
-
-                        String receivedMsg = null;
-                        long receiveEnd = 0;
                         try (Consumer<byte[]> consumer = pulsarClient.newConsumer()
                                 .topic(testTopic)
-                                .subscriptionName("connection-diagnostics-sub")
+                                .subscriptionName(subName)
                                 .subscriptionType(SubscriptionType.Exclusive)
-                                .subscribe()) {
+                                .subscribe();
+                             Producer<byte[]> producer = pulsarClient.newProducer()
+                                     .topic(testTopic)
+                                     .enableBatching(false)
+                                     .sendTimeout(5, TimeUnit.SECONDS)
+                                     .create()) {
+
+                            sendStartNs = System.nanoTime();
+                            MessageId msgId = producer.newMessage()
+                                    .value(sentPayload.getBytes(StandardCharsets.UTF_8))
+                                    .send();
+                            sendEndNs = System.nanoTime();
+                            result.put("clientProducerReachable", true);
+                            result.put("testMessageId", msgId.toString());
 
                             Message<byte[]> msg = consumer.receive(5, TimeUnit.SECONDS);
                             if (msg != null) {
-                                receivedMsg = new String(msg.getData(), StandardCharsets.UTF_8);
+                                String received = new String(msg.getData(), StandardCharsets.UTF_8);
+                                if (sentPayload.equals(received)) {
+                                    result.put("clientConsumerReachable", true);
+                                    result.put("receivedTestMessage", received);
+                                } else {
+                                    result.put("clientConsumerReachable", false);
+                                    result.put("consumerError", "Received unexpected payload");
+                                }
                                 consumer.acknowledge(msg);
-                                result.put("clientConsumerReachable", true);
-                                result.put("receivedTestMessage", receivedMsg);
+                                receiveEndNs = System.nanoTime();
                             } else {
                                 result.put("clientConsumerReachable", false);
                                 result.put("consumerError", "No message received in time");
                             }
-                            receiveEnd = System.nanoTime();
                         } catch (Exception e) {
-                            result.put("clientConsumerReachable", false);
-                            result.put("clientConsumerError", e.getMessage());
+                            result.put("clientProducerReachable", false);
+                            result.put("clientProducerError", e.getMessage());
+                            return createErrorResult("Producer/Consumer test failed");
                         }
 
-                        result.put("producerTimeMs", (sendEnd - sendStart) / 1_000_000.0);
+                        result.put("producerTimeMs", (sendEndNs - sendStartNs) / 1_000_000.0);
 
                         if ("detailed".equals(testType)) {
                             result.put("diagnosticsLevel", "detailed");
                             return createSuccessResult("Detailed connection check completed", result);
                         }
 
-                        if ("network".equals(testType) && receivedMsg != null) {
-                            double roundTripMs = (receiveEnd - sendStart) / 1_000_000.0;
+                        if ("network".equals(testType) && Boolean.TRUE.equals(result.get("clientConsumerReachable"))) {
+                            double roundTripMs = (receiveEndNs - sendStartNs) / 1_000_000.0;
                             result.put("roundTripLatencyMs", roundTripMs);
 
-                            int testSize = 1024 * 100; // 100 KB
+                            int testSize = 1024 * 100;
                             byte[] payload = new byte[testSize];
                             Arrays.fill(payload, (byte) 65);
                             long totalBytes = 0;
@@ -592,6 +694,8 @@ public class MonitoringTools extends BasePulsarTools{
                         result.put("diagnosticsLevel", testType);
                         return createSuccessResult("Connection diagnostics (" + testType + ") completed", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Error in connection diagnostics", e);
                         result.put("diagnosticsLevel", testType);
@@ -627,7 +731,6 @@ public class MonitoringTools extends BasePulsarTools{
                 .callHandler((exchange, request) -> {
                     Map<String, Object> result = new HashMap<>();
                     try {
-                        // 1. Broker ping test
                         try {
                             pulsarAdmin.brokers().getLeaderBroker();
                             result.put("brokerHealthy", true);
@@ -636,7 +739,6 @@ public class MonitoringTools extends BasePulsarTools{
                             return createErrorResult("Broker is not reachable: " + e.getMessage());
                         }
 
-                        // 2. Optional topic check
                         String topic = getStringParam(request.arguments(), "topic");
                         String subscriptionName = getStringParam(request.arguments(), "subscriptionName");
 
@@ -644,19 +746,14 @@ public class MonitoringTools extends BasePulsarTools{
                             topic = buildFullTopicName(request.arguments());
                             TopicStats stats = pulsarAdmin.topics().getStats(topic);
 
-                            long totalBytesIn = stats.getBytesInCounter();
-                            long totalBytesOut = stats.getBytesOutCounter();
-                            long totalMsgsIn = stats.getMsgInCounter();
-                            long totalMsgsOut = stats.getMsgOutCounter();
-
-                            double throughputMBps = (totalBytesIn + totalBytesOut) / (1024.0 * 1024.0);
-                            double messagesPerSecond = totalMsgsIn + totalMsgsOut; // 这里假设采集周期为1秒
+                            double throughputMBps = (stats.getMsgThroughputIn()
+                                    + stats.getMsgThroughputOut()) / (1024.0 * 1024.0);
+                            double messagesPerSecond = (stats.getMsgRateIn() + stats.getMsgRateOut());
 
                             result.put("topic", topic);
                             result.put("throughputMBps", throughputMBps);
                             result.put("messagesPerSecond", messagesPerSecond);
 
-                            // 3. Backlog analysis
                             long backlog = stats.getSubscriptions().values().stream()
                                     .mapToLong(sub -> sub.getMsgBacklog())
                                     .sum();
@@ -674,7 +771,6 @@ public class MonitoringTools extends BasePulsarTools{
                             }
                             result.put("backlogLevel", backlogLevel);
 
-                            // 4. Subscription check if provided
                             if (subscriptionName != null && stats.getSubscriptions().containsKey(subscriptionName)) {
                                 SubscriptionStats subStats = stats.getSubscriptions().get(subscriptionName);
                                 result.put("subscriptionName", subscriptionName);
@@ -693,6 +789,8 @@ public class MonitoringTools extends BasePulsarTools{
 
                         return createSuccessResult("Health check completed", result);
 
+                    } catch (IllegalArgumentException e) {
+                        return createErrorResult(e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Unexpected error in health check", e);
                         return createErrorResult("Unexpected error: " + e.getMessage());
@@ -700,7 +798,4 @@ public class MonitoringTools extends BasePulsarTools{
                 }).build()
         );
     }
-
-
-
 }

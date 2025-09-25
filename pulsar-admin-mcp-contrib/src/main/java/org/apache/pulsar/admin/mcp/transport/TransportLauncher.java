@@ -30,19 +30,6 @@ public class TransportLauncher {
        System.setProperty("PULSAR_SERVICE_URL", options.getServiceUrl());
        System.setProperty("mcp.transport", options.getTransport().getValue());
        System.setProperty("mcp.http.port", String.valueOf(options.getHttpPort()));
-
-       if (options.isDebug()){
-           System.setProperty("mcp.debug", "true");
-           System.setProperty("logging.level.org.apache.pulsar.admin.mcp", "DEBUG");
-       }
-
-       if (options.getAuthPlugin() != null) {
-           System.setProperty("pulsar.auth.plugin", options.getAuthPlugin());
-       }
-
-       if (options.getAuthParams() != null) {
-           System.setProperty("pulsar.auth.params", options.getAuthParams());
-       }
     }
 
     private static void startTransport(PulsarMCPCliOptions options) throws Exception {
@@ -72,10 +59,6 @@ public class TransportLauncher {
                 transportManager.startTransport(PulsarMCPCliOptions.TransportType.HTTP, options);
             }
             case STDIO -> {
-                transportManager.startTransport(PulsarMCPCliOptions.TransportType.STDIO, options);
-            }
-            case ALL -> {
-                transportManager.startTransport(PulsarMCPCliOptions.TransportType.HTTP, options);
                 transportManager.startTransport(PulsarMCPCliOptions.TransportType.STDIO, options);
             }
         }

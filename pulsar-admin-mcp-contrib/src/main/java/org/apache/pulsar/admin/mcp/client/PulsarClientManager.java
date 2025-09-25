@@ -44,7 +44,6 @@ public class PulsarClientManager implements AutoCloseable {
         getClient();
     }
 
-
     public synchronized PulsarAdmin getAdmin() throws Exception {
         if (!adminInitialized.get()) {
             initializePulsarAdmin();
@@ -76,27 +75,12 @@ public class PulsarClientManager implements AutoCloseable {
                     .connectionTimeout(30, TimeUnit.SECONDS)
                     .readTimeout(60, TimeUnit.SECONDS);
 
-            String authPlugin = (config != null) ? config.getAuthPlugin() : null;
-            String authParams = (config != null) ? config.getAuthParams() : null;
-            if (authPlugin == null) {
-                authPlugin = System.getProperty("pulsar.auth.plugin");
-            }
-            if (authParams == null) {
-                authParams = System.getProperty("pulsar.auth.params");
-            }
-
-            if (authPlugin != null && authParams != null) {
-                adminBuilder.authentication(authPlugin, authParams);
-                LOGGER.info("Authentication configured: {}", authPlugin);
-            }
-
             pulsarAdmin = adminBuilder.build();
 
             pulsarAdmin.clusters().getClusters();
             success = true;
 
         } catch (Exception e) {
-
             if (pulsarAdmin != null) {
                 try {
                     pulsarAdmin.close();
@@ -129,18 +113,6 @@ public class PulsarClientManager implements AutoCloseable {
                     .operationTimeout(30, TimeUnit.SECONDS)
                     .connectionTimeout(30, TimeUnit.SECONDS)
                     .keepAliveInterval(30, TimeUnit.SECONDS);
-
-            String authPlugin = (config != null) ? config.getAuthPlugin() : null;
-            String authParams = (config != null) ? config.getAuthParams() : null;
-            if (authPlugin == null) {
-                authPlugin = System.getProperty("pulsar.auth.plugin");
-            }
-            if (authParams == null) {
-                authParams = System.getProperty("pulsar.auth.params");
-            }
-            if (authPlugin != null && authParams != null) {
-                clientBuilder.authentication(authPlugin, authParams);
-            }
 
             this.pulsarClient = clientBuilder.build();
             success = true;

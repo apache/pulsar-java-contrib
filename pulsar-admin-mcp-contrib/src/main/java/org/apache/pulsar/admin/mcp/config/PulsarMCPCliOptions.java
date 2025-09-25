@@ -31,8 +31,7 @@ public class PulsarMCPCliOptions {
     @Getter
     public enum TransportType {
         STDIO("stdio", "Standard input/ouput (Claude Desktop)"),
-        HTTP("http", "HTTP Server-Sent Events (Web application)"),
-        ALL("all", "All transports simultaneously");
+        HTTP("http", "HTTP Server-Sent Events (Web application)");
 
         private final String value;
         private final String description;
@@ -65,16 +64,10 @@ public class PulsarMCPCliOptions {
     private String adminUrl = "http://localhost:8080";
     private String serviceUrl = "pulsar://localhost:6650";
     private int httpPort = 8889;
-    private boolean debug = false;
 
     private String configFile = null;
     private String allowTools = null;
     private String blockTools = null;
-    private String authPlugin = null;
-    private String authParams = null;
-
-    private boolean sdkMode = false;
-    private boolean migrationEnabled = false;
 
     public static PulsarMCPCliOptions parseArgs(String[] args) {
         PulsarMCPCliOptions options = new PulsarMCPCliOptions();
@@ -125,20 +118,12 @@ public class PulsarMCPCliOptions {
                     }
                 }
 
-                case "--debug" -> options.debug = true;
 
                 case "--config-file" -> options.configFile = args[++i];
 
                 case "--allow-tools" -> options.allowTools = args[++i];
 
                 case "--block-tools" -> options.blockTools = args[++i];
-
-                case "--auth-plugin" -> options.authPlugin = args[++i];
-
-                case "--auth-params" -> options.authParams = args[++i];
-
-                case "--sdk-mode" -> options.sdkMode = true;
-                case "--migration-enabled" -> options.migrationEnabled = true;
 
                 default -> {
                     try {
@@ -210,8 +195,6 @@ public class PulsarMCPCliOptions {
 
         allowTools = props.getProperty("mcp.allow.tools", allowTools);
         blockTools = props.getProperty("mcp.block.tools", blockTools);
-        authPlugin = props.getProperty("mcp.auth.plugin", authPlugin);
-        authParams = props.getProperty("mcp.auth.params", authParams);
 
     }
 
@@ -261,8 +244,6 @@ public class PulsarMCPCliOptions {
                 + '\''
                 + "httpPort="
                 + httpPort
-                + "debug="
-                + debug
                 + ",configFile='"
                 + configFile
                 + '\''

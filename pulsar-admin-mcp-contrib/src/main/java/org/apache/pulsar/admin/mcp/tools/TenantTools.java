@@ -17,6 +17,7 @@ import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.spec.McpSchema;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -151,28 +152,39 @@ public class TenantTools extends BasePulsarTools {
                             return createErrorResult("Tenant already exists: " + tenant,
                                     List.of("Choose a different tenant name"));
                         } catch (PulsarAdminException.NotFoundException ignore) {
+
+                        } catch (PulsarAdminException e) {
+                            return createErrorResult("Failed to verify tenant existence: " + e.getMessage());
                         }
 
                         Set<String> adminRoles = getSetParam(request.arguments(), "adminRoles");
                         Set<String> allowedClusters = getSetParam(request.arguments(), "allowedClusters");
 
-                        if (allowedClusters.isEmpty()) {
-                            try {
-                                List<String> availableClusters = pulsarAdmin.clusters().getClusters();
-                                if (!availableClusters.isEmpty()) {
-                                    allowedClusters = Set.copyOf(availableClusters);
-                                } else {
-                                    allowedClusters = Set.of("standalone");
-                                }
-                            } catch (Exception ex) {
-                                LOGGER.warn("Failed to get clusters", ex);
-                                allowedClusters = Set.of("standalone");
-                            }
+                        List<String> availableClusters0;
+                        try {
+                            availableClusters0 = pulsarAdmin.clusters().getClusters();
+                        } catch (Exception ex) {
+                            LOGGER.warn("Failed to get clusters", ex);
+                            availableClusters0 = List.of();
                         }
+                        Set<String> availableClusters = (availableClusters0 == null)
+                                ? Set.of()
+                                : new HashSet<>(availableClusters0);
 
                         if (allowedClusters.isEmpty()) {
-                            return createErrorResult("No available clusters for tenant creation",
-                                    List.of("Specify allowedClusters or ensure clusters exist"));
+                            if (!availableClusters.isEmpty()) {
+                                allowedClusters = Set.copyOf(availableClusters);
+                            } else {
+                                allowedClusters = Set.of("standalone");
+                            }
+                        } else {
+                            if (!availableClusters.isEmpty()) {
+                                Set<String> invalid = new HashSet<>(allowedClusters);
+                                invalid.removeAll(availableClusters);
+                                if (!invalid.isEmpty()) {
+                                    return createErrorResult("Invalid clusters in allowedClusters: " + invalid);
+                                }
+                            }
                         }
 
                         TenantInfo tenantInfo = TenantInfo.builder()
@@ -182,12 +194,13 @@ public class TenantTools extends BasePulsarTools {
 
                         pulsarAdmin.tenants().createTenant(tenant, tenantInfo);
 
-                        return createSuccessResult("Tenant created successfully", Map.of(
-                                "tenant", tenant,
-                                "allowedClusters", allowedClusters,
-                                "adminRoles", adminRoles,
-                                "created", true
-                        ));
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tenant", tenant);
+                        result.put("allowedClusters", allowedClusters);
+                        result.put("adminRoles", adminRoles == null ? Set.of() : adminRoles);
+                        result.put("created", true);
+
+                        return createSuccessResult("Tenant created successfully", result);
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult("Invalid parameter: " + e.getMessage());
@@ -228,7 +241,12 @@ public class TenantTools extends BasePulsarTools {
                         String tenant = getRequiredStringParam(request.arguments(), "tenant");
                         boolean force = getBooleanParam(request.arguments(), "force", false);
 
-                        // 不能删除系统租户
+                        try {
+                            pulsarAdmin.tenants().getTenantInfo(tenant);
+                        } catch (PulsarAdminException.NotFoundException e) {
+                            return createErrorResult("Tenant not found: " + tenant);
+                        }
+
                         if (isSystemTenant(tenant)) {
                             return createErrorResult(
                                     "System tenant cannot be deleted",
@@ -236,10 +254,9 @@ public class TenantTools extends BasePulsarTools {
                             );
                         }
 
-                        // 检查命名空间
                         if (!force) {
                             List<String> namespaces = pulsarAdmin.namespaces().getNamespaces(tenant);
-                            if (!namespaces.isEmpty()) {
+                            if (namespaces != null && !namespaces.isEmpty()) {
                                 return createErrorResult(
                                         "Tenant has namespaces. Use 'force=true' to delete.",
                                         List.of(
@@ -251,7 +268,6 @@ public class TenantTools extends BasePulsarTools {
                             }
                         }
 
-                        // 执行删除
                         pulsarAdmin.tenants().deleteTenant(tenant);
 
                         Map<String, Object> resultData = new HashMap<>();
@@ -266,16 +282,6 @@ public class TenantTools extends BasePulsarTools {
 
                     } catch (IllegalArgumentException e) {
                         return createErrorResult("Invalid parameter", List.of(e.getMessage()));
-                    } catch (PulsarAdminException.ConflictException e) {
-                        return createErrorResult(
-                                "Tenant still has active namespaces",
-                                List.of("Delete all namespaces first or use 'force=true'")
-                        );
-                    } catch (PulsarAdminException.NotFoundException e) {
-                        return createErrorResult(
-                                "Tenant not found",
-                                List.of("Tenant does not exist or already deleted")
-                        );
                     } catch (Exception e) {
                         LOGGER.error("Failed to delete tenant", e);
                         String errorMessage = (e.getMessage() != null && !e.getMessage().isBlank())
@@ -320,12 +326,38 @@ public class TenantTools extends BasePulsarTools {
                     try {
                         String tenant = getRequiredStringParam(request.arguments(), "tenant");
 
-                        TenantInfo currentInfo = pulsarAdmin.tenants().getTenantInfo(tenant);
+                        TenantInfo currentInfo;
+                        try {
+                            currentInfo = pulsarAdmin.tenants().getTenantInfo(tenant);
+                        } catch (PulsarAdminException.NotFoundException e) {
+                            return createErrorResult("Tenant not found: " + tenant + ". Create the tenant first.");
+                        }
+
+                        Set<String> currentRoles = currentInfo.getAdminRoles();
+                        Set<String> currentAllowed = currentInfo.getAllowedClusters();
+                        if (currentRoles == null) {
+                            currentRoles = Set.of();
+                        }
+                        if (currentAllowed == null) {
+                            currentAllowed = Set.of();
+                        }
 
                         Set<String> adminRoles = getSetParamOrDefault(request.arguments(),
-                                "adminRoles", currentInfo.getAdminRoles());
+                                "adminRoles", currentRoles);
                         Set<String> allowedClusters = getSetParamOrDefault(request.arguments(),
-                                "allowedClusters", currentInfo.getAllowedClusters());
+                                "allowedClusters", currentAllowed);
+
+                        List<String> availableClusters0 = pulsarAdmin.clusters().getClusters();
+                        Set<String> availableClusters = (availableClusters0 == null)
+                                ? Set.of()
+                                : new HashSet<>(availableClusters0);
+                        if (!allowedClusters.isEmpty() && !availableClusters.isEmpty()) {
+                            Set<String> invalid = new HashSet<>(allowedClusters);
+                            invalid.removeAll(availableClusters);
+                            if (!invalid.isEmpty()) {
+                                return createErrorResult("Invalid clusters in allowedClusters: " + invalid);
+                            }
+                        }
 
                         TenantInfo tenantInfo = TenantInfo.builder()
                                 .adminRoles(adminRoles)
@@ -334,15 +366,14 @@ public class TenantTools extends BasePulsarTools {
 
                         pulsarAdmin.tenants().updateTenant(tenant, tenantInfo);
 
-                        return createSuccessResult("Tenant updated successfully", Map.of(
-                                "tenant", tenant,
-                                "adminRoles", adminRoles,
-                                "allowedClusters", allowedClusters,
-                                "updated", true
-                        ));
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tenant", tenant);
+                        result.put("adminRoles", adminRoles);
+                        result.put("allowedClusters", allowedClusters);
+                        result.put("updated", true);
 
-                    } catch (PulsarAdminException.NotFoundException e) {
-                        return createErrorResult("Tenant not found", List.of("Create the tenant first"));
+                        return createSuccessResult("Tenant updated successfully", result);
+
                     } catch (IllegalArgumentException e) {
                         return createErrorResult("Invalid parameter: " + e.getMessage());
                     } catch (Exception e) {
@@ -376,14 +407,17 @@ public class TenantTools extends BasePulsarTools {
                     try {
                         String tenant = getRequiredStringParam(request.arguments(), "tenant");
 
-                        List<String> namespaces = pulsarAdmin.namespaces().getNamespaces(tenant);
+                        List<String> namespaces0 = pulsarAdmin.namespaces().getNamespaces(tenant);
+                        List<String> namespaces = (namespaces0 == null) ? List.of() : namespaces0;
+
 
                         int totalTopics = 0;
                         Map<String, Integer> namespaceTopicCounts = new HashMap<>();
 
                         for (String namespace : namespaces) {
                             try {
-                                List<String> topics = pulsarAdmin.topics().getList(namespace);
+                                List<String> topics0 = pulsarAdmin.topics().getList(namespace);
+                                List<String> topics = (topics0 == null) ? List.of() : topics0;
                                 namespaceTopicCounts.put(namespace, topics.size());
                                 totalTopics += topics.size();
                             } catch (Exception e) {
@@ -392,16 +426,16 @@ public class TenantTools extends BasePulsarTools {
                             }
                         }
 
-                        return createSuccessResult("Tenant stats retrieved successfully", Map.of(
-                                "tenant", tenant,
-                                "namespaceCount", namespaces.size(),
-                                "namespaces", namespaces,
-                                "totalTopics", totalTopics,
-                                "topicCounts", namespaceTopicCounts
-                        ));
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tenant", tenant);
+                        result.put("namespaceCount", namespaces.size());
+                        result.put("namespaces", namespaces);
+                        result.put("totalTopics", totalTopics);
+                        result.put("topicCounts", namespaceTopicCounts);
 
-                    } catch (PulsarAdminException.NotFoundException e) {
-                        return createErrorResult("Tenant not found", List.of("Ensure the tenant exists"));
+                        return createSuccessResult("Tenant stats retrieved successfully", result);
+
+
                     } catch (IllegalArgumentException e) {
                         return createErrorResult("Invalid parameter: " + e.getMessage());
                     } catch (Exception e) {
@@ -425,8 +459,7 @@ public class TenantTools extends BasePulsarTools {
     }
 
     private String safeErrorMessage(Exception e) {
-        if (e.getMessage() == null
-                || e.getMessage().isBlank()) {
+        if (e.getMessage() == null || e.getMessage().isBlank()) {
             return "Unknown error occurred";
         }
         return e.getMessage().split("\n")[0].trim();

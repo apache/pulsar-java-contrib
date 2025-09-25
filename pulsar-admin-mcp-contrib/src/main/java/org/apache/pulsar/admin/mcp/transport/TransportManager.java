@@ -59,9 +59,7 @@ public class TransportManager {
                 try {
                     httpTransport.start(options);
                 } catch (Exception e) {
-                    if (options.isDebug()) {
-                        logger.error("Exception in transport", e);
-                    }
+                    throw new RuntimeException(e);
                 }
             }, executorService);
         }
