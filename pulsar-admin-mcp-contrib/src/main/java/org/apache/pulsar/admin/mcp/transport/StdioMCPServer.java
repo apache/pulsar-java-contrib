@@ -31,38 +31,40 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
     }
 
     @Override
-    public void start(PulsarMCPCliOptions options) throws Exception {
-        if (running.get()) {
+    public void start(PulsarMCPCliOptions options) {
+        if (!running.compareAndSet(false, true)) {
             logger.warn("Stdio transport is already running");
             return;
         }
 
+        if (this.pulsarClientManager == null) {
+            running.set(false);
+            throw new IllegalStateException("PulsarClientManager not injected.");
+        }
+
         try {
-//            initializePulsarAdmin();
-            initializePulsarClient(options);
+            pulsarAdmin = pulsarClientManager.getAdmin();
+            pulsarClient = pulsarClientManager.getClient();
         } catch (Exception e) {
-            logger.error("Failed to initialize PulsarAdmin", e);
-            throw new RuntimeException("Cannot start MCP server without Pulsar connection. "
-                    + "Please ensure Pulsar is running at"
-                    + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
+            running.set(false);
+            logger.error("Failed to obtain Pulsar admin/client", e);
+            throw new RuntimeException(
+                    "Cannot start MCP server without Pulsar connection. Admin: "
+                            + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
         }
 
         var mcpServer = McpServer.sync(new StdioServerTransportProvider())
                 .serverInfo("pulsar-admin-stdio", "1.0.0")
-                .capabilities(McpSchema.ServerCapabilities.builder()
-                        .tools(true)
-                        .build())
+                .capabilities(McpSchema.ServerCapabilities.builder().tools(true).build())
                 .build();
 
-        registerFilteredTools(mcpServer, options);
+        registerAllTools(mcpServer);
 
-        running.set(true);
-
-        Thread.currentThread().join();
     }
 
+
     @Override
-    public void stop() throws Exception {
+    public void stop() {
         if (!running.get()) {
             return;
         }
@@ -83,11 +85,6 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
     @Override
     public PulsarMCPCliOptions.TransportType getType() {
         return PulsarMCPCliOptions.TransportType.STDIO;
-    }
-
-    @Override
-    public boolean isRunning() {
-        return running.get();
     }
 
     public static void main(String[] args) {

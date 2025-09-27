@@ -23,8 +23,6 @@ public interface Transport {
 
     PulsarMCPCliOptions.TransportType getType();
 
-    boolean isRunning();
-
     default String getDescription(){
         return getType().getDescription();
     }

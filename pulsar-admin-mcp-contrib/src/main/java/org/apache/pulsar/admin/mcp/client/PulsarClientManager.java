@@ -15,50 +15,40 @@ package org.apache.pulsar.admin.mcp.client;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class PulsarClientManager implements AutoCloseable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PulsarClientManager.class);
-
     private PulsarAdmin pulsarAdmin;
     private PulsarClient pulsarClient;
 
-    private final PulsarMCPCliOptions config;
     private final AtomicBoolean adminInitialized = new AtomicBoolean();
     private final AtomicBoolean clientInitialized = new AtomicBoolean();
 
-    public PulsarClientManager(PulsarMCPCliOptions config){
-        this.config = config;
-    }
-
-    public void initialize() throws Exception {
+    public void initialize() {
         getAdmin();
         getClient();
     }
 
-    public synchronized PulsarAdmin getAdmin() throws Exception {
+    public synchronized PulsarAdmin getAdmin() {
         if (!adminInitialized.get()) {
             initializePulsarAdmin();
         }
         return pulsarAdmin;
     }
 
-    public synchronized PulsarClient getClient() throws Exception {
+    public synchronized PulsarClient getClient() {
         if (!clientInitialized.get()) {
             initializePulsarClient();
         }
         return pulsarClient;
     }
 
-    private void initializePulsarAdmin() throws Exception {
+    private void initializePulsarAdmin() {
 
         if (!adminInitialized.compareAndSet(false, true)) {
             return;
@@ -66,9 +56,7 @@ public class PulsarClientManager implements AutoCloseable {
 
         boolean success = false;
         try {
-            String adminUrl = (config != null && config.getAdminUrl() != null && !config.getAdminUrl().isBlank())
-                    ? config.getAdminUrl()
-                    : System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
+            String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
 
             PulsarAdminBuilder adminBuilder = PulsarAdmin.builder()
                     .serviceHttpUrl(adminUrl)
@@ -98,15 +86,13 @@ public class PulsarClientManager implements AutoCloseable {
         }
     }
 
-    private void initializePulsarClient() throws Exception {
+    private void initializePulsarClient()  {
         if (!clientInitialized.compareAndSet(false, true)) {
             return;
         }
         boolean success = false;
         try {
-            String serviceUrl = (config != null && config.getServiceUrl() != null && !config.getServiceUrl().isBlank())
-                    ? config.getServiceUrl()
-                    : System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
+            String serviceUrl = System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
 
             var clientBuilder = PulsarClient.builder()
                     .serviceUrl(serviceUrl)

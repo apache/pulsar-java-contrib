@@ -686,8 +686,4 @@ public class SubscriptionTools extends BasePulsarTools{
                 .build());
     }
 
-
-
-
-
 }
