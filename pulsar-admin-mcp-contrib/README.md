@@ -131,11 +131,7 @@ Same as above
   "mcpServers": {
     "pulsar-admin-http": {
       "type": "http",
-      "url": "http://localhost:8889/mcp/stream",
-      "env": {
-        "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
-        "PULSAR_ADMIN_URL": "http://localhost:8080"
-      }
+      "url": "http://localhost:8889/mcp"
     }
   }
 }
@@ -299,33 +295,6 @@ The following examples demonstrate typical workflows of triggering tool calls wi
 - **Topic Naming**: Full name format is `persistent://tenant/namespace/topic`. Short names are allowed, server will normalize.
 
 - **Failure Domain**: Set Failure Domain for Broker/Bookie to improve rack/availability zone level disaster recovery.
-
-## Troubleshooting
-
-### NoClassDefFoundError: LogarithmicArrayByteBufferPool
-Jetty version conflict. Use Jetty 11 consistently:
-```xml
-<dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-server</artifactId>
-    <version>11.0.20</version>
-</dependency>
-<dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-ee9-servlet</artifactId>
-    <version>11.0.20</version>
-</dependency>
-```
-And use `org.eclipse.jetty.ee9.servlet.*` imports.
-
-### STDIO Mode JSON Polluted by Logs
-Turn off/reduce stdout logging, output errors to stderr; stdout should only output MCP JSON.
-
-### Message Send/Receive Not Available
-PulsarClient not initialized, or producer/consumer not created. Only Admin available will return `not_implemented`.
-
-### Expire message … due to ongoing message expiration
-Another expiration task is already running on the same partition; wait for completion or execute on partitions individually; combine with `get-topic-internal-stats` for observation.
 
 ## License
 
