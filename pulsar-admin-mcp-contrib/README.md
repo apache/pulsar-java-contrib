@@ -1,67 +1,81 @@
 # Pulsar Admin MCP Contrib
 
-Apache Pulsar administration server based on Model Context Protocol (MCP), enabling AI assistants to manage Pulsar clusters through a unified interface (supports both HTTP streaming and STDIO transports).
-
-## Key Features
-
-- **Dual Transport**: HTTP Stream (`/mcp/stream`) and STDIO
-- **Full Stack Management**: Cluster / Tenant / Namespace / Topic / Subscription / (Optional) Message
-- **Monitoring Tools**: Health checks, performance metrics, backlog analysis
-- **Schema Management**: Upload / Query / Compatibility testing
-- **Authentication Support**: Plugin-based (e.g., Token)
-- **Tool Whitelist/Blacklist**: Enable/disable tools by name
+Apache Pulsar management server based on Model Context Protocol (MCP), enabling AI assistants to manage Pulsar clusters through a unified interface (supports both HTTP Streaming and STDIO transport modes).
 
 ## Quick Start
 
-### Prerequisites
+### Dependencies
 
 - Java 17+
 - Maven 3.6+
-- Accessible Apache Pulsar (local or remote)
+- Pulsar 2.10+ (3.x preferred)
+- MCP Java SDK 0.12.0
+- Jetty 11.0.20
 
-### Building
+## 0. Start Pulsar
+
+### Method A: Docker
+```bash
+docker run -it --name pulsar -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:3.2.4 bin/pulsar standalone
+```
+
+- **Service URL**: `pulsar://localhost:6650`
+- **Admin URL**: `http://localhost:8080`
+
+### Method B: Local Binary
+```bash
+bin/pulsar standalone
+```
+
+## 1. Build
 
 ```bash
 mvn clean package -DskipTests
 ```
 
-### Running
+**Output**: `target/mcp-contrib-1.0.0-SNAPSHOT.jar`
 
-#### HTTP (Recommended for Web / Remote)
+## 2. Start MCP Server
 
+### HTTP Mode (Recommended: Web/Remote)
 ```bash
 java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport http --port 8889
-# Success log example:
-# HTTP Streamable transport ready at http://localhost:8889/mcp/stream
 ```
 
-**Health Check:**
+**Log Example**:
+```
+HTTP Streamable transport ready at http://localhost:8889/mcp/stream
+```
 
+**Health Check**:
 ```bash
 curl -i http://localhost:8889/mcp/stream
 ```
 
-Returns 200/405/404 are all acceptable, indicating the endpoint is responding (whether 200 depends on request method/body).
-
-#### STDIO (Recommended for Claude Desktop and other local integrations)
-
+### STDIO Mode (Recommended: Claude Desktop / Local IDE)
 ```bash
 java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport stdio
 ```
 
-**Claude Desktop Configuration Example:**
+## 3. Client Configuration
+
+### Claude Desktop
+
+#### Windows Configuration
+
+**Config File Location**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Configuration Steps**:
+1. Open Claude Desktop config file
+2. Add the following configuration to the `mcpServers` section:
 
 ```json
 {
   "mcpServers": {
     "pulsar-admin": {
       "command": "java",
-      "args": [
-        "-jar",
-        "E:\\projects2\\pulsar-admin-mcp-contrib\\target\\mcp-contrib-1.0.0-SNAPSHOT.jar",
-        "--transport", "stdio"
-      ],
-      "cwd": "E:\\projects2\\pulsar-admin-mcp-contrib",
+      "args": ["-jar", "Path to compiled JAR, e.g., E:\\projects\\pulsar-admin-mcp-contrib\\target\\mcp-contrib-1.0.0-SNAPSHOT.jar", "--transport", "stdio"],
+      "cwd": "Project directory, e.g., E:\\projects\\pulsar-admin-mcp-contrib",
       "env": {
         "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
         "PULSAR_ADMIN_URL": "http://localhost:8080"
@@ -71,46 +85,81 @@ java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport stdio
 }
 ```
 
-> **Note**: The environment variable name is `PULSAR_SERVICE_URL` (not `PULSAR_SERVER_URL`).
+#### macOS Configuration
 
-## Configuration
+**Config File Location**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-### Environment Variables (Priority: Command Line > Environment Variables > Default)
+**Configuration Steps**:
+1. Open Claude Desktop config file
+2. Add the following configuration to the `mcpServers` section:
 
-- `PULSAR_SERVICE_URL` (default: `pulsar://localhost:6650`)
-- `PULSAR_ADMIN_URL` (default: `http://localhost:8080`)
-
-### Command Line Arguments
-
-- `--transport`: `http` / `stdio` / `all`
-- `--port`: HTTP port (default: 8889)
-- `--service-url` / `--admin-url`: Override connection addresses
-- `--auth-plugin` / `--auth-params`: Authentication (e.g., Token)
-- `--allow-tools` / `--block-tools`: Whitelist/blacklist tools by name (comma-separated)
-
-### Authentication Example (Token)
-
-```bash
-java \
- -Dpulsar.auth.plugin=org.apache.pulsar.client.impl.auth.AuthenticationToken \
- -Dpulsar.auth.params=token:xxxx \
- -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport http
+```json
+{
+  "mcpServers": {
+    "pulsar-admin": {
+      "command": "java",
+      "args": ["-jar", "Path to compiled JAR, e.g., /Users/username/projects/pulsar-admin-mcp-contrib/target/mcp-contrib-1.0.0-SNAPSHOT.jar", "--transport", "stdio"],
+      "cwd": "Project directory, e.g., /Users/username/projects/pulsar-admin-mcp-contrib",
+      "env": {
+        "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
+        "PULSAR_ADMIN_URL": "http://localhost:8080"
+      }
+    }
+  }
+}
 ```
 
-### Configuration File (Optional)
+**Notes**:
+- Replace `Path to compiled JAR` with the actual JAR file path
+- Replace `Project directory` with the actual project root directory path
+- Ensure Java environment variables are properly configured
+- Windows uses backslash `\`, macOS uses forward slash `/`
 
-**config.properties**
+### Cherry Studio
 
-```properties
-pulsar.serviceUrl=pulsar://localhost:6650
-pulsar.admin.url=http://localhost:8080
-mcp.transport=http
-mcp.http.port=8889
-mcp.auth.plugin=org.apache.pulsar.client.impl.auth.AuthenticationToken
-mcp.auth.params=token:your-token-here
+#### STDIO Mode Configuration
+Same as above
+
+#### HTTP Mode Configuration
+
+**Configuration Steps**:
+1. Ensure MCP server is started (HTTP mode)
+2. Add HTTP type configuration in Cherry Studio:
+
+```json
+{
+  "mcpServers": {
+    "pulsar-admin-http": {
+      "type": "http",
+      "url": "http://localhost:8889/mcp/stream",
+      "env": {
+        "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
+        "PULSAR_ADMIN_URL": "http://localhost:8080"
+      }
+    }
+  }
+}
 ```
 
-## Tool Inventory (Complete List)
+**Configuration Notes**:
+- **STDIO Mode**: Suitable for local development, requires full JAR file path
+- **HTTP Mode**: Suitable for remote access, requires HTTP server to be started first
+- Both modes use the same environment variable configuration for Pulsar cluster connection
+- Windows uses backslash `\`, macOS uses forward slash `/`
+
+## 4. Configuration Options
+
+### Environment Variables
+- `PULSAR_SERVICE_URL` (default `pulsar://localhost:6650`)
+- `PULSAR_ADMIN_URL` (default `http://localhost:8080`)
+
+### Command Line Parameters
+- `--transport`: http / stdio
+- `--port`: HTTP port (default 8889)
+
+## 5. Tool Inventory
+
+Covers **Cluster** / **Tenant** / **Namespace** / **Topic** / **Subscription** / **Message** / **Schema** / **Monitoring** 8 categories, totaling 71 tools:
 
 ### Cluster Management (10 tools)
 - `list-clusters` - List all Pulsar clusters and their status
@@ -199,18 +248,7 @@ mcp.auth.params=token:your-token-here
 - `connection-diagnostics` - Run connection diagnostics with different test depths
 - `backlog-analysis` - Analyze message backlog within a namespace
 
-### Tool Summary
-**Total: 69 tools** across 7 categories:
-- Cluster Management: 10 tools
-- Tenant Management: 6 tools
-- Namespace Management: 10 tools
-- Topic Management: 15 tools
-- Subscription Management: 10 tools
-- Message Operations: 8 tools
-- Schema Management: 6 tools
-- Monitoring & Diagnostics: 6 tools
-
-> **Note**: When only PulsarAdmin is initialized, message send/consume related operations will return `not_implemented`; to enable them, PulsarClient needs to be initialized and producer/consumer created.
+> **Note**: When only PulsarAdmin is initialized, message send/consume related tools will return `not_implemented`; to enable them, initialize PulsarClient and create producer/consumer.
 
 ## Natural Language Interaction Demo (Use Cases)
 
@@ -219,9 +257,9 @@ The following examples demonstrate typical workflows of triggering tool calls wi
 ### 1. Tenant and Namespace Management
 
 **Prompt:**
-> Show me what tenants are in the cluster; create namespace ns-orders under tenant1, then show me the statistics for this namespace.
+> Show me all tenants in the cluster; create namespace ns-orders under tenant1, then show me the statistics for this namespace.
 
-**Possible triggers:**
+**Triggered:**
 `list-tenants` → `create-namespace(tenant=tenant1, namespace=ns-orders)` → `get-namespace-stats(...)`
 
 ### 2. Create Partitioned Topic and Scale
@@ -229,15 +267,15 @@ The following examples demonstrate typical workflows of triggering tool calls wi
 **Prompt:**
 > Create topic orders under public/default with 8 partitions; then scale to 16 partitions and show me the partition metadata.
 
-**Possible triggers:**
+**Triggered:**
 `create-topic(partitions=8)` → `update-topic-partitions(16)` → `get-partitioned-metadata`
 
-### 3. Clear Backlog and Compaction
+### 3. Clear Backlog and Compact
 
 **Prompt:**
-> The backlog for public/default/orders is very large, clear it; then do a compaction.
+> public/default/orders has a large backlog, clear it; then do a compaction.
 
-**Possible triggers:**
+**Triggered:**
 `get-topic-backlog` → `expire-topic-messages/clear-namespace-backlog` → `compact-topic`
 
 ### 4. Schema Upload and Compatibility Testing
@@ -245,44 +283,27 @@ The following examples demonstrate typical workflows of triggering tool calls wi
 **Prompt:**
 > Set Avro schema for persistent://public/default/orders: orderId:string, amount:double, and check compatibility.
 
-**Possible triggers:**
+**Triggered:**
 `upload-schema(type=AVRO, schemaJson=...)` → `test-schema-compatibility` / `get-schema-info`
 
 ### 5. Subscription Management and Cursor Reset
 
 **Prompt:**
-> Create failover subscription sub-a on orders, then reset the cursor to 1 hour ago.
+> Create failover subscription sub-a on orders, then reset cursor to 1 hour ago.
 
-**Possible triggers:**
+**Triggered:**
 `create-subscription(type=failover)` → `reset-subscription-cursor(timestamp=now-1h)`
 
 ## Best Practices
 
-- **Topic Naming**: Full names like `persistent://tenant/namespace/topic`. Short names are allowed, the server will normalize them.
+- **Topic Naming**: Full name format is `persistent://tenant/namespace/topic`. Short names are allowed, server will normalize.
 
 - **Failure Domain**: Set Failure Domain for Broker/Bookie to improve rack/availability zone level disaster recovery.
 
-- **Storage-Compute Separation**: Pulsar decouples storage (BookKeeper) from compute (Broker), making scaling and maintenance more flexible.
-
-**Strategy Recommendations:**
-
-- Set retention policies, backlog quotas, TTL at namespace level;
-- Set partition count slightly higher than estimated for smoother future scaling;
-- Recommend executing large expiration/cleanup operations during off-peak hours.
-
 ## Troubleshooting
 
-### ObjectMapper must be set
-Your MCP SDK version requires explicit ObjectMapper:
-
-```java
-var transport = HttpServletStreamableServerTransportProvider.builder()
-    .objectMapper(new ObjectMapper().findAndRegisterModules())
-    .build();
-```
-
 ### NoClassDefFoundError: LogarithmicArrayByteBufferPool
-Jetty version conflicts. Use Jetty 11 consistently:
+Jetty version conflict. Use Jetty 11 consistently:
 ```xml
 <dependency>
     <groupId>org.eclipse.jetty</groupId>
@@ -300,43 +321,11 @@ And use `org.eclipse.jetty.ee9.servlet.*` imports.
 ### STDIO Mode JSON Polluted by Logs
 Turn off/reduce stdout logging, output errors to stderr; stdout should only output MCP JSON.
 
-### Message Send/Receive Unavailable
-PulsarClient not initialized, or producer/consumer not created. Returns `not_implemented` when only Admin is available.
+### Message Send/Receive Not Available
+PulsarClient not initialized, or producer/consumer not created. Only Admin available will return `not_implemented`.
 
 ### Expire message … due to ongoing message expiration
-Another expiration task is already running on the same partition; wait for completion or execute on partitions individually; observe with `get-topic-internal-stats`.
-
-## Version Recommendations (Matrix)
-
-| Component | Recommended Version |
-|-----------|-------------------|
-| Java | 17+ |
-| Pulsar | 2.10+ (3.x preferred) |
-| MCP Java SDK | 0.12.x |
-| Jetty | 11.0.20 |
-| Jackson | 2.17.2 |
-
-## Development Guidelines
-
-- **Layered Architecture**: ClusterTools / TenantTools / NamespaceTools / TopicTools / SubscriptionTools / SchemaTools / MessageTools / MonitoringTools
-
-- **Client Management**: PulsarClientManager lazily loads and thread-safely manages PulsarAdmin and PulsarClient, shared across multiple tools.
-
-- **Exception Handling**: Only return first line error messages, stack traces go to stderr; ensure MCP responses are 100% valid JSON.
-
-- **Tool Filtering**: Control exported capabilities through `--allow-tools` / `--block-tools`.
-
-## Testing and Code Standards
-
-```bash
-# Unit tests
-mvn test
-
-# Code style (optional)
-mvn spotless:apply
-mvn license:format
-mvn checkstyle:check
-```
+Another expiration task is already running on the same partition; wait for completion or execute on partitions individually; combine with `get-topic-internal-stats` for observation.
 
 ## License
 
