@@ -16,7 +16,9 @@ package org.apache.pulsar.admin.mcp.transport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
+import io.modelcontextprotocol.spec.McpSchema;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
@@ -50,11 +52,12 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
             }
             try {
                 pulsarAdmin = pulsarClientManager.getAdmin();
+                pulsarClient = pulsarClientManager.getClient();
             } catch (Exception e) {
                 running.set(false);
                 throw new RuntimeException("Failed to obtain PulsarAdmin from PulsarClientManager", e);
             }
-//            logger.info("Starting HTTP Streaming Pulsar MCP server");
+            logger.info("Starting HTTP Streaming Pulsar MCP server");
 
             ObjectMapper mapper = new ObjectMapper()
                     .findAndRegisterModules()
@@ -65,10 +68,18 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
                     .objectMapper(mapper)
                     .build();
 
+            var mcpServer = McpServer.sync(streamingTransport)
+                    .serverInfo("pulsar-admin-http-streaming", "1.0.0")
+                    .capabilities(McpSchema.ServerCapabilities.builder()
+                            .tools(true)
+                            .build())
+                    .build();
+
+            registerAllTools(mcpServer);
             startJettyServer(streamingTransport, options.getHttpPort());
 
             logger.info("HTTP Streaming Pulsar MCP server started "
-                    + "at http://localhost:{}/mcp/stream", options.getHttpPort());
+                    + "at http://localhost:{}/mcp", options.getHttpPort());
 
         } catch (Exception e) {
             running.set(false);
@@ -125,7 +136,6 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
         context.addServlet(servletHolder, "/mcp/stream/*");
 
         jettyServer.start();
-        logger.info("HTTP Streamable transport ready at http://localhost:{}/mcp/stream", httpPort);
     }
 
 
