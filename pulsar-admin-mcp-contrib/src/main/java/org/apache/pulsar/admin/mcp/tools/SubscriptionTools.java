@@ -191,23 +191,13 @@ public class SubscriptionTools extends BasePulsarTools{
                         String subscription = getRequiredStringParam(request.arguments(), "subscription");
                         String messageId = getStringParam(request.arguments(), "messageId");
 
-                        String pos = messageId == null ? "latest" : messageId.trim().toLowerCase();
-                        switch (pos) {
-                            case "latest" ->
-                                    pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
-                            case "earliest" ->
-                                    pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.earliest);
-                            default -> {
-                                return createErrorResult("messageId must be 'latest' or 'earliest'");
-                            }
+                        String pos = (messageId == null ? "latest" : messageId.trim().toLowerCase());
+                        if (!pos.equals("latest") && !pos.equals("earliest")) {
+                            return createErrorResult("messageId must be 'latest' or 'earliest'");
                         }
-                        if (messageId == null || messageId.equals("latest")) {
-                            pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
-                        } else if (messageId.equals("earliest")) {
-                            pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.earliest);
-                        } else {
-                            pulsarAdmin.topics().createSubscription(topic, subscription, MessageId.latest);
-                        }
+
+                        MessageId initial = pos.equals("earliest") ? MessageId.earliest : MessageId.latest;
+                        pulsarAdmin.topics().createSubscription(topic, subscription, initial);
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("topic", topic);
