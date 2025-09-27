@@ -21,13 +21,14 @@ public class PulsarMCPCliOptions {
     @Getter
     public enum TransportType {
 
-        STDIO("stdio", "Standard input/output"),
-        HTTP("http", "HTTP Server-Sent Events");
+        STDIO("stdio", "Standard input/output (Claude Desktop)"),
+        HTTP("http", "HTTP Streaming Events (Web application)");
         private final String value;
         private final String description;
 
         TransportType(String value, String description) {
-            this.value = value; this.description = description;
+            this.value = value;
+            this.description = description;
         }
 
         public static TransportType fromString(String value) {
@@ -46,20 +47,6 @@ public class PulsarMCPCliOptions {
 
     public static PulsarMCPCliOptions parseArgs(String[] args) {
         PulsarMCPCliOptions opts = new PulsarMCPCliOptions();
-
-        String envTransport = System.getenv("MCP_TRANSPORT");
-        if (envTransport != null && !envTransport.isBlank()) {
-            opts.transport = TransportType.fromString(envTransport);
-        }
-
-        String envPort = System.getenv("MCP_HTTP_PORT");
-        if (envPort != null && !envPort.isBlank()) {
-            try {
-                opts.httpPort = Integer.parseInt(envPort);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid MCP_HTTP_PORT: " + envPort);
-            }
-        }
 
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -81,7 +68,7 @@ public class PulsarMCPCliOptions {
                     }
                 }
                 default -> {
-                    throw new IllegalArgumentException("Unknown argument: " + arg);
+                   throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
         }
