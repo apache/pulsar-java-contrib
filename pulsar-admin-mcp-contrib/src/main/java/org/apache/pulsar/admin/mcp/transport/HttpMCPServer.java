@@ -16,9 +16,7 @@ package org.apache.pulsar.admin.mcp.transport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
-import io.modelcontextprotocol.spec.McpSchema;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.pulsar.admin.mcp.client.PulsarClientManager;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
@@ -56,7 +54,7 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
                 running.set(false);
                 throw new RuntimeException("Failed to obtain PulsarAdmin from PulsarClientManager", e);
             }
-            logger.info("Starting HTTP Streaming Pulsar MCP server");
+//            logger.info("Starting HTTP Streaming Pulsar MCP server");
 
             ObjectMapper mapper = new ObjectMapper()
                     .findAndRegisterModules()
@@ -65,13 +63,6 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
             var streamingTransport = HttpServletStreamableServerTransportProvider
                     .builder()
                     .objectMapper(mapper)
-                    .build();
-
-            var mcpServer = McpServer.sync(streamingTransport)
-                    .serverInfo("pulsar-admin-http-streaming", "1.0.0")
-                    .capabilities(McpSchema.ServerCapabilities.builder()
-                    .tools(true)
-                    .build())
                     .build();
 
             startJettyServer(streamingTransport, options.getHttpPort());
@@ -87,13 +78,11 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop() {
         if (!running.compareAndSet(true, false)) {
             return;
         }
-
         logger.info("Stopping HTTP Streaming Pulsar MCP server....");
-
         if (jettyServer != null) {
             try {
                 if (jettyServer.isRunning()) {
@@ -103,18 +92,20 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
                 logger.warn("Error stopping Jetty: {}", e.getMessage());
             }
         }
-
+        if (pulsarClientManager != null) {
+            try {
+                pulsarClientManager.close();
+            } catch (Exception e) {
+                logger.warn("Error closing PulsarClientManager: {}", e.getMessage());
+            }
+        }
         logger.info("HTTP Streaming Pulsar MCP server stopped");
     }
+
 
     @Override
     public PulsarMCPCliOptions.TransportType getType() {
         return PulsarMCPCliOptions.TransportType.HTTP;
-    }
-
-    @Override
-    public boolean isRunning() {
-        return running.get();
     }
 
     private void startJettyServer(HttpServletStreamableServerTransportProvider
@@ -143,7 +134,7 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
             HttpMCPServer transport = new HttpMCPServer();
             PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(args);
 
-            PulsarClientManager manager = new PulsarClientManager(options);
+            PulsarClientManager manager = new PulsarClientManager();
             manager.initialize();
             transport.injectClientManager(manager);
 

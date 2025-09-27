@@ -110,7 +110,7 @@ mcp.auth.plugin=org.apache.pulsar.client.impl.auth.AuthenticationToken
 mcp.auth.params=token:your-token-here
 ```
 
-## Tool Inventory (Main Categories)
+## Tool Inventory (Complete List)
 
 ### Cluster Management (10 tools)
 - `list-clusters` - List all Pulsar clusters and their status
@@ -198,6 +198,17 @@ mcp.auth.params=token:your-token-here
 - `health-check` - Check cluster, topic, and subscription health
 - `connection-diagnostics` - Run connection diagnostics with different test depths
 - `backlog-analysis` - Analyze message backlog within a namespace
+
+### Tool Summary
+**Total: 69 tools** across 7 categories:
+- Cluster Management: 10 tools
+- Tenant Management: 6 tools
+- Namespace Management: 10 tools
+- Topic Management: 15 tools
+- Subscription Management: 10 tools
+- Message Operations: 8 tools
+- Schema Management: 6 tools
+- Monitoring & Diagnostics: 6 tools
 
 > **Note**: When only PulsarAdmin is initialized, message send/consume related operations will return `not_implemented`; to enable them, PulsarClient needs to be initialized and producer/consumer created.
 

@@ -14,25 +14,13 @@
 package org.apache.pulsar.admin.mcp.transport;
 
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions.TransportType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TransportManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(TransportManager.class);
-
     private final Map<TransportType, Transport> transports = new ConcurrentHashMap<>();
-    private final ExecutorService executorService = Executors.newCachedThreadPool(r -> {
-        Thread thread = new Thread(r, "Transport-Manager");
-        thread.setDaemon(true);
-        return thread;
-    });
 
     public void registerTransport(Transport transport) {
         TransportType type = transport.getType();
@@ -44,36 +32,7 @@ public class TransportManager {
         if (transport == null) {
             throw new IllegalArgumentException("Transport not registered: " + type);
         }
-
         transport.start(options);
-    }
-
-    public void startAllTransports(PulsarMCPCliOptions  options) throws Exception {
-        logger.info("Starting all transports simultaneously");
-
-        Transport httpTransport = transports.get(TransportType.HTTP);
-        CompletableFuture<Void> httpFuture = null;
-
-        if (httpTransport != null) {
-            httpFuture = CompletableFuture.runAsync(() -> {
-                try {
-                    httpTransport.start(options);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }, executorService);
-        }
-
-        if (httpFuture != null) {
-            Thread.sleep(2000);
-        }
-
-        Transport stdioTransport = transports.get(TransportType.STDIO);
-        if (stdioTransport != null) {
-            stdioTransport.start(options);
-        } else {
-            logger.warn("No stdio transport registered");
-        }
     }
 
 }
