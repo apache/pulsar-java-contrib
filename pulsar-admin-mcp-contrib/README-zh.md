@@ -131,11 +131,7 @@ java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport stdio
   "mcpServers": {
     "pulsar-admin-http": {
       "type": "http",
-      "url": "http://localhost:8889/mcp/stream",
-      "env": {
-        "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
-        "PULSAR_ADMIN_URL": "http://localhost:8080"
-      }
+      "url": "http://localhost:8889/mcp"
     }
   }
 }
@@ -299,33 +295,6 @@ java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport stdio
 - **Topic 命名**：完整名形如 `persistent://tenant/namespace/topic`。允许短名输入，服务端会规范化。
 
 - **失败域**：为 Broker/Bookie 设置 Failure Domain，提升机架/可用区级容灾。
-
-## 故障排查
-
-### NoClassDefFoundError: LogarithmicArrayByteBufferPool
-Jetty 版本混用。统一使用 Jetty 11：
-```xml
-<dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-server</artifactId>
-    <version>11.0.20</version>
-</dependency>
-<dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-ee9-servlet</artifactId>
-    <version>11.0.20</version>
-</dependency>
-```
-并使用 `org.eclipse.jetty.ee9.servlet.*` 的 import。
-
-### STDIO 模式 JSON 被日志污染
-关闭/降低 stdout 日志，把错误输出到 stderr；stdout 只输出 MCP JSON。
-
-### 消息发送/接收不可用
-未初始化 PulsarClient，或 producer/consumer 未创建。仅 Admin 可用时会返回 `not_implemented`。
-
-### Expire message … due to ongoing message expiration
-同一分区已有过期任务在跑；等待完成或对分区逐个执行；结合 `get-topic-internal-stats` 观察。
 
 ## 许可证
 
