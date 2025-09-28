@@ -656,8 +656,7 @@ public class NamespaceTools extends BasePulsarTools {
                         String tenant = parts.length > 0 ? parts[0] : "";
                         String namespace = parts.length > 1 ? parts[1] : "";
 
-                        List<String> topics = pulsarAdmin.topics().
-                                getList(fullNamespace);
+                        List<String> topics = pulsarAdmin.topics().getList(fullNamespace);
                         if (topics == null) {
                             topics = List.of();
                         }

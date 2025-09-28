@@ -43,14 +43,13 @@ public class StdioMCPServer extends AbstractMCPServer implements Transport {
         }
 
         try {
-            pulsarAdmin = pulsarClientManager.getAdmin();
-            pulsarClient = pulsarClientManager.getClient();
+            initializePulsar();
         } catch (Exception e) {
             running.set(false);
-            logger.error("Failed to obtain Pulsar admin/client", e);
-            throw new RuntimeException(
-                    "Cannot start MCP server without Pulsar connection. Admin: "
-                            + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
+            logger.error("Failed to initialize PulsarAdmin", e);
+            throw new RuntimeException("Cannot start MCP server without Pulsar connection. "
+                    + "Please ensure Pulsar is running at"
+                    + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
         }
 
         var mcpServer = McpServer.sync(new StdioServerTransportProvider())
