@@ -2,6 +2,13 @@
 
 Apache Pulsar management server based on Model Context Protocol (MCP), enabling AI assistants to manage Pulsar clusters through a unified interface (supports both HTTP Streaming and STDIO transport modes).
 
+## Demo
+### Claude Desktop
+![demo1](demo1.gif)
+
+### Cherry Studio
+![demo2](demo2.gif)
+
 ## Quick Start
 
 ### Dependencies
