@@ -232,7 +232,7 @@
                 <artifactId>license-maven-plugin</artifactId>
                 <version>${license-maven-plugin.version}</version>
                 <configuration>
-                    <header>E:/pulsar-java-contrib/etc/APACHE-2.txt</header>
+                    <header>etc/APACHE-2.txt</header>
                     <excludes>
                         <exclude>LICENSE</exclude>
                         <exclude>NOTICE</exclude>
