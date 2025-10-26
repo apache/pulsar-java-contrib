@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// 验证没有问题
+
 package org.apache.pulsar.admin.mcp.tools;
 
 import io.modelcontextprotocol.server.McpServerFeatures;
@@ -216,7 +216,7 @@ public class ClusterTools extends BasePulsarTools {
 
                         try {
                             pulsarAdmin.clusters().getCluster(clusterName);
-                            return createErrorResult("Cluster info retrieved" + clusterName,
+                            return createErrorResult("Cluster already exists: " + clusterName,
                                     List.of("Choose a different cluster name"));
                         } catch (PulsarAdminException.NotFoundException ignore) {
 
@@ -834,7 +834,8 @@ public class ClusterTools extends BasePulsarTools {
                         for (int i = 0; i < rawList.size(); i++) {
                             Object v = rawList.get(i);
                             if (!(v instanceof String s) || (s = s.trim()).isEmpty()) {
-                                return createErrorResult("All brokers must be non-empty strings" + i);
+                                return createErrorResult("All brokers must be non-empty strings "
+                                        + "(invalid at index " + i + ")");
                             }
                             brokers.add(s);
                         }
@@ -894,7 +895,7 @@ public class ClusterTools extends BasePulsarTools {
                             result.put("clusterName", clusterName);
                             result.put("domainName", domainName);
                             result.put("brokers", new ArrayList<>(brokers));
-                            result.put("actualBrokers", new ArrayList<>(resultDomain.getBrokers())); // 真正生效
+                            result.put("actualBrokers", new ArrayList<>(resultDomain.getBrokers()));
                             result.put("operation", isUpdate ? "update" : "create");
                             result.put("set", true);
                             result.put("timestamp", System.currentTimeMillis());

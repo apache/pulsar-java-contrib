@@ -688,7 +688,7 @@ public class MessageTools extends BasePulsarTools {
                         }
                         boolean ack = getBooleanParam(request.arguments(), "ack", true);
                         String subTypeStr = getStringParam(request.arguments(), "subscriptionType");
-                        SubscriptionType subType = SubscriptionType.Shared; // 默认 Shared，避免 Exclusive 抢占
+                        SubscriptionType subType = SubscriptionType.Shared;
                         if (subTypeStr != null) {
                             try {
                                 subType = SubscriptionType.valueOf(subTypeStr.replace('-', '_'));

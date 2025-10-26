@@ -101,7 +101,7 @@ public class NamespaceTools extends BasePulsarTools {
                         return createErrorResult("Invalid parameter: " + e.getMessage());
                     } catch (Exception e) {
                         LOGGER.error("Failed to list namespaces", e);
-                        return createErrorResult("Failed to list namespaces" + e.getMessage());
+                        return createErrorResult("Failed to list namespaces：" + e.getMessage());
                     }
                 }).build());
     }

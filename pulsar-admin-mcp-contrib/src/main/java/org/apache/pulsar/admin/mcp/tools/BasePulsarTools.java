@@ -57,7 +57,7 @@ public abstract class BasePulsarTools {
     }
 
     protected McpSchema.CallToolResult createErrorResult(String message){
-        String errorText = "Error" + message;
+        String errorText = "Error：" + message;
         return new McpSchema.CallToolResult(
                 List.of(new McpSchema.TextContent(errorText)),
                 true

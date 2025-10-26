@@ -27,10 +27,10 @@ docker run -it --name pulsar -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:3.2.4
 bin/pulsar standalone
 ```
 
-## 1. 编译
+## 1. 编译 Pulsar MCP
 
 ```bash
-mvn clean package -DskipTests
+mvn clean install -DskipTests -am -pl pulsar-admin-mcp-contrib
 ```
 
 **输出**：`target/mcp-contrib-1.0.0-SNAPSHOT.jar`
@@ -39,7 +39,7 @@ mvn clean package -DskipTests
 
 ### HTTP 模式（推荐：Web/远程）
 ```bash
-java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport http --port 8889
+java -jar pulsar-admin-mcp-contrib/target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport http --port 8889
 ```
 
 **日志示例**：
@@ -54,7 +54,7 @@ curl -i http://localhost:8889/mcp/stream
 
 ### STDIO 模式（推荐：Claude Desktop / 本地 IDE）
 ```bash
-java -jar target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport stdio
+java -jar pulsar-admin-mcp-contrib/target/mcp-contrib-1.0.0-SNAPSHOT.jar --transport stdio
 ```
 
 ## 3. 客户端配置

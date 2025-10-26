@@ -271,9 +271,6 @@ public class TopicTools extends BasePulsarTools {
                             result.put("msgThroughputIn", ps.getMsgThroughputIn());
                             result.put("msgThroughputOut", ps.getMsgThroughputOut());
                             result.put("storageSize", ps.getStorageSize());
-                            result.put("subscriptions", null);
-                            result.put("publishers", null);
-                            result.put("replication", null);
                         } else {
                             TopicStats stats = pulsarAdmin.topics().getStats(topic);
                             result.put("msgRateIn", stats.getMsgRateIn());
