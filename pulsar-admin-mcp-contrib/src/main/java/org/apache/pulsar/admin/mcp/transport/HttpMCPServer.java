@@ -113,7 +113,6 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
         logger.info("HTTP Streaming Pulsar MCP server stopped");
     }
 
-
     @Override
     public PulsarMCPCliOptions.TransportType getType() {
         return PulsarMCPCliOptions.TransportType.HTTP;
@@ -137,7 +136,6 @@ public class HttpMCPServer extends AbstractMCPServer implements Transport {
 
         jettyServer.start();
     }
-
 
     public static void main(String[] args) {
         try {
