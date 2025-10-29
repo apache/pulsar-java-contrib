@@ -470,7 +470,7 @@ public class MonitoringTools extends BasePulsarTools{
     private void registerBacklogAnalysis(McpSyncServer mcpServer) {
         McpSchema.Tool tool = createTool(
                 "backlog-analysis",
-                "Analyze message backlog within a Pulsar namespace"
+                "Analyze message backlog within a Pulsar namespace "
                             +   "and report topics/subscriptions exceeding a given threshold",
                 """
                 {

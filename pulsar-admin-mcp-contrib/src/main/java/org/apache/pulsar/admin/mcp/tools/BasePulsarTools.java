@@ -57,7 +57,7 @@ public abstract class BasePulsarTools {
     }
 
     protected McpSchema.CallToolResult createErrorResult(String message){
-        String errorText = "Error：" + message;
+        String errorText = "Error: " + message;
         return new McpSchema.CallToolResult(
                 List.of(new McpSchema.TextContent(errorText)),
                 true
@@ -69,7 +69,6 @@ public abstract class BasePulsarTools {
         result.append(message).append("\n");
 
         if (suggestions != null && !suggestions.isEmpty()) {
-            result.append(suggestions).append("\n");
             suggestions.forEach(s -> result.append(s).append("\n"));
         }
         return new McpSchema.CallToolResult(

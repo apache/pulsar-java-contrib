@@ -54,30 +54,38 @@ public class MessageTools extends BasePulsarTools {
     }
 
     private Producer<byte[]> getOrCreateProducer(String fullTopic) throws Exception {
-        return producerCache.computeIfAbsent(fullTopic, t -> {
+        Producer<byte[]> existing = producerCache.get(fullTopic);
+        if (existing != null) {
+            return existing;
+        }
+        PulsarClient client = getClient();
+        if (client == null) {
+            throw new RuntimeException("PulsarClient is not available. "
+                    + "Please check your Pulsar connection configuration.");
+        }
+        if (client.isClosed()) {
+            throw new RuntimeException("PulsarClient is closed. Please restart the MCP server.");
+        }
+
+        Producer<byte[]> newProducer = client.newProducer()
+                .topic(fullTopic)
+                .enableBatching(true)
+                .batchingMaxPublishDelay(5, TimeUnit.MILLISECONDS)
+                .blockIfQueueFull(true)
+                .compressionType(CompressionType.LZ4)
+                .sendTimeout(30, TimeUnit.SECONDS)
+                .create();
+
+        Producer<byte[]> actual = producerCache.putIfAbsent(fullTopic, newProducer);
+        if (actual != null) {
             try {
-                PulsarClient client = getClient();
-                if (client == null) {
-                    throw new RuntimeException("PulsarClient is not available. "
-                            + "Please check your Pulsar connection configuration.");
-                }
+                newProducer.close();
+            } catch (Exception ignored) {
 
-                if (client.isClosed()) {
-                    throw new RuntimeException("PulsarClient is closed. Please restart the MCP server.");
-                }
-
-                return client.newProducer()
-                        .topic(t)
-                        .enableBatching(true)
-                        .batchingMaxPublishDelay(5, TimeUnit.MILLISECONDS)
-                        .blockIfQueueFull(true)
-                        .compressionType(CompressionType.LZ4)
-                        .sendTimeout(30, TimeUnit.SECONDS)
-                        .create();
-            } catch (Exception e) {
-                throw new RuntimeException("create producer failed for " + t, e);
             }
-        });
+            return actual;
+        }
+        return newProducer;
     }
 
     public void registerTools(McpSyncServer mcpServer) {

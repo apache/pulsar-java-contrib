@@ -428,7 +428,7 @@ public class ClusterTools extends BasePulsarTools {
 
                             List<String> referencingNamespaces = new ArrayList<>();
                             for (String tenant : tenants) {
-                                var nss = pulsarAdmin.namespaces().getNamespaces(tenant); // 正确：参数是 tenant
+                                var nss = pulsarAdmin.namespaces().getNamespaces(tenant);
                                 for (String ns : nss) {
                                     var repl = pulsarAdmin.namespaces().getNamespaceReplicationClusters(ns);
                                     if (repl != null && repl.contains(clusterName)) {

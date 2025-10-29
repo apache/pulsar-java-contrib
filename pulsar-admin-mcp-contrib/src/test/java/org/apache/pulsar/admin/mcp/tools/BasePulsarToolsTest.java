@@ -90,7 +90,7 @@ public class BasePulsarToolsTest {
         org.testng.Assert.assertEquals(result.content().size(), 1);
         org.testng.Assert.assertTrue(result.content().get(0) instanceof McpSchema.TextContent);
         String content = ((McpSchema.TextContent) result.content().get(0)).text();
-        org.testng.Assert.assertEquals(content, "Error：Test error");
+        org.testng.Assert.assertEquals(content, "Error: Test error");
     }
 
     @Test
@@ -345,46 +345,57 @@ public class BasePulsarToolsTest {
             super(pulsarAdmin);
         }
 
+        @Override
         public McpSchema.CallToolResult createSuccessResult(String message, Object data) {
             return super.createSuccessResult(message, data);
         }
 
+        @Override
         public McpSchema.CallToolResult createErrorResult(String message) {
             return super.createErrorResult(message);
         }
 
+        @Override
         public McpSchema.CallToolResult createErrorResult(String message, List<String> suggestions) {
             return super.createErrorResult(message, suggestions);
         }
 
+        @Override
         public String getStringParam(Map<String, Object> map, String key) {
             return super.getStringParam(map, key);
         }
 
+        @Override
         public String getRequiredStringParam(Map<String, Object> map, String key) {
             return super.getRequiredStringParam(map, key);
         }
 
+        @Override
         public Integer getIntParam(Map<String, Object> map, String key, Integer defaultValue) {
             return super.getIntParam(map, key, defaultValue);
         }
 
+        @Override
         public Boolean getBooleanParam(Map<String, Object> map, String key, Boolean defaultValue) {
             return super.getBooleanParam(map, key, defaultValue);
         }
 
+        @Override
         public Long getLongParam(Map<String, Object> arguments, String timestamp, Long defaultValue) {
             return super.getLongParam(arguments, timestamp, defaultValue);
         }
 
+        @Override
         public String buildFullTopicName(Map<String, Object> arguments) {
             return super.buildFullTopicName(arguments);
         }
 
+        @Override
         public String resolveNamespace(Map<String, Object> arguments) {
             return super.resolveNamespace(arguments);
         }
 
+        @Override
         public void addTopicBreakdown(Map<String, Object> result, String fullTopicName) {
             super.addTopicBreakdown(result, fullTopicName);
         }

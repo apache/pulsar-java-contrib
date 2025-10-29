@@ -43,7 +43,7 @@ public abstract class AbstractMCPServer {
 
     public void initializePulsar() {
         if (this.pulsarClientManager == null) {
-            this.pulsarClientManager = new PulsarClientManager(); // 无参构造
+            this.pulsarClientManager = new PulsarClientManager();
         }
         this.pulsarClientManager.initialize();
 
