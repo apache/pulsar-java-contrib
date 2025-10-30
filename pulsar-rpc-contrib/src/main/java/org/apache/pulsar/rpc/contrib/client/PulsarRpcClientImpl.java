@@ -14,6 +14,7 @@
 package org.apache.pulsar.rpc.contrib.client;
 
 import static lombok.AccessLevel.PACKAGE;
+import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_DELIVER_AT_TIME;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
@@ -104,6 +105,7 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
         }
     }
 
+    @Override
     public V request(String correlationId, T value, Map<String, Object> config) throws PulsarRpcClientException {
         try {
             return requestAsync(correlationId, value, config).get();
@@ -113,36 +115,80 @@ class PulsarRpcClientImpl<T, V> implements PulsarRpcClient<T, V> {
         }
     }
 
+    @Override
     public CompletableFuture<V> requestAsync(String correlationId, T value, Map<String, Object> config) {
+        return internalRequest(correlationId, value, config, -1, -1, null);
+    }
+
+    @Override
+    public CompletableFuture<V> requestAtAsync(String correlationId, T value, Map<String, Object> config,
+                                               long timestamp) {
+        return internalRequest(correlationId, value, config, timestamp, -1, null);
+    }
+
+    @Override
+    public CompletableFuture<V> requestAfterAsync(String correlationId, T value, Map<String, Object> config,
+                                                  long delay, TimeUnit unit) {
+        return internalRequest(correlationId, value, config, -1, delay, unit);
+    }
+
+    private CompletableFuture<V> internalRequest(String correlationId, T value, Map<String, Object> config,
+                                                 long timestamp, long delay, TimeUnit unit) {
         CompletableFuture<V> replyFuture = new CompletableFuture<>();
         long replyTimeoutMillis = replyTimeout.toMillis();
-        replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
-                .exceptionally(e -> {
-                    replyFuture.completeExceptionally(new PulsarRpcClientException(e.getMessage()));
-                    callback.onTimeout(correlationId, e);
-                    removeRequest(correlationId);
-                    return null;
-                });
-        pendingRequestsMap.put(correlationId, replyFuture);
-
         TypedMessageBuilder<T> requestMessage = newRequestMessage(correlationId, value, config);
-
-        sender.sendRequest(requestMessage, replyTimeoutMillis)
-                .thenAccept(requestMessageId -> {
-                    if (replyFuture.isCancelled() || replyFuture.isCompletedExceptionally()) {
+        if (timestamp == -1 && delay == -1) {
+            replyFuture.orTimeout(replyTimeoutMillis, TimeUnit.MILLISECONDS)
+                    .exceptionally(e -> {
+                        replyFuture.completeExceptionally(new PulsarRpcClientException(e.getMessage()));
+                        callback.onTimeout(correlationId, e);
                         removeRequest(correlationId);
-                    } else {
-                        callback.onSendRequestSuccess(correlationId, requestMessageId);
-                    }
-                }).exceptionally(ex -> {
-                    if (callback != null) {
-                        callback.onSendRequestError(correlationId, ex, replyFuture);
-                    } else {
-                        replyFuture.completeExceptionally(new PulsarRpcClientException(ex.getMessage()));
-                    }
-                    removeRequest(correlationId);
-                    return null;
-                });
+                        return null;
+                    });
+            pendingRequestsMap.put(correlationId, replyFuture);
+
+            sender.sendRequest(requestMessage, replyTimeoutMillis)
+                    .thenAccept(requestMessageId -> {
+                        if (replyFuture.isCancelled() || replyFuture.isCompletedExceptionally()) {
+                            removeRequest(correlationId);
+                        } else {
+                            callback.onSendRequestSuccess(correlationId, requestMessageId);
+                        }
+                    }).exceptionally(ex -> {
+                        if (callback != null) {
+                            callback.onSendRequestError(correlationId, ex, replyFuture);
+                        } else {
+                            replyFuture.completeExceptionally(new PulsarRpcClientException(ex.getMessage()));
+                        }
+                        removeRequest(correlationId);
+                        return null;
+                    });
+        } else {
+            // Handle Delayed RPC.
+            if (pendingRequestsMap.containsKey(correlationId)) {
+                removeRequest(correlationId);
+            }
+
+            if (timestamp > 0) {
+                requestMessage.property(REQUEST_DELIVER_AT_TIME, String.valueOf(timestamp));
+                requestMessage.deliverAt(timestamp);
+            } else if (delay > 0 && unit != null) {
+                String delayedAt = String.valueOf(System.currentTimeMillis() + unit.toMillis(delay));
+                requestMessage.property(REQUEST_DELIVER_AT_TIME, delayedAt);
+                requestMessage.deliverAfter(delay, unit);
+            }
+            sender.sendRequest(requestMessage, replyTimeoutMillis).thenAccept(requestMessageId -> {
+                callback.onSendRequestSuccess(correlationId, requestMessageId);
+            }).exceptionally(ex -> {
+                if (callback != null) {
+                    callback.onSendRequestError(correlationId, ex, replyFuture);
+                } else {
+                    replyFuture.completeExceptionally(new PulsarRpcClientException(ex.getMessage()));
+                }
+                return null;
+            });
+        }
+
         return replyFuture;
     }
 

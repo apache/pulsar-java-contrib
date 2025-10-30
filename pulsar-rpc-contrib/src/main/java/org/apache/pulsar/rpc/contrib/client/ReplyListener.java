@@ -14,6 +14,8 @@
 package org.apache.pulsar.rpc.contrib.client;
 
 import static org.apache.pulsar.rpc.contrib.common.Constants.ERROR_MESSAGE;
+import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_DELIVER_AT_TIME;
+import static org.apache.pulsar.rpc.contrib.common.Constants.SERVER_SUB;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.AccessLevel;
@@ -50,17 +52,19 @@ class ReplyListener<V> implements MessageListener<V> {
     public void received(Consumer<V> consumer, Message<V> msg) {
         String correlationId = msg.getKey();
         try {
-            if (!pendingRequestsMap.containsKey(correlationId)) {
+            if (!pendingRequestsMap.containsKey(correlationId) && !msg.hasProperty(REQUEST_DELIVER_AT_TIME)) {
                 log.warn("[{}] [{}] No pending request found for correlationId {}."
                                 + " This may indicate the message has already been processed or timed out.",
                         consumer.getTopic(), consumer.getConsumerName(), correlationId);
             } else {
-                CompletableFuture<V> future = pendingRequestsMap.get(correlationId);
+                CompletableFuture<V> future = pendingRequestsMap.computeIfAbsent(correlationId,
+                        key -> new CompletableFuture<>());
                 String errorMessage = msg.getProperty(ERROR_MESSAGE);
+                String serverSub = msg.getProperty(SERVER_SUB);
                 if (errorMessage != null) {
-                    callBack.onReplyError(correlationId, consumer.getSubscription(), errorMessage, future);
+                    callBack.onReplyError(correlationId, serverSub, errorMessage, future);
                 } else {
-                    callBack.onReplySuccess(correlationId, consumer.getSubscription(), msg.getValue(), future);
+                    callBack.onReplySuccess(correlationId, serverSub, msg.getValue(), future);
                 }
             }
         } finally {

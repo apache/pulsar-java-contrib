@@ -14,6 +14,7 @@
 package org.apache.pulsar.rpc.contrib.server;
 
 import static org.apache.pulsar.rpc.contrib.common.Constants.REPLY_TOPIC;
+import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_DELIVER_AT_TIME;
 import static org.apache.pulsar.rpc.contrib.common.Constants.REQUEST_TIMEOUT_MILLIS;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -53,7 +54,7 @@ class RequestListener<T, V> implements MessageListener<T> {
     public void received(Consumer<T> consumer, Message<T> msg) {
         long replyTimeout = Long.parseLong(msg.getProperty(REQUEST_TIMEOUT_MILLIS))
                 - (System.currentTimeMillis() - msg.getPublishTime());
-        if (replyTimeout <= 0) {
+        if (replyTimeout <= 0 && !msg.hasProperty(REQUEST_DELIVER_AT_TIME)) {
             consumer.acknowledgeAsync(msg);
             return;
         }
@@ -62,12 +63,15 @@ class RequestListener<T, V> implements MessageListener<T> {
         String requestSubscription = consumer.getSubscription();
         String replyTopic = msg.getProperty(REPLY_TOPIC);
         T value = msg.getValue();
-
+        long delayedAt = msg.hasProperty(REQUEST_DELIVER_AT_TIME)
+                ? Long.parseLong(msg.getProperty(REQUEST_DELIVER_AT_TIME))
+                + Long.parseLong(msg.getProperty(REQUEST_TIMEOUT_MILLIS))
+                : 0;
         try {
             requestFunction.apply(value)
                     .orTimeout(replyTimeout, TimeUnit.MILLISECONDS)
                     .thenAccept(reply -> {
-                        sender.sendReply(replyTopic, correlationId, reply, value, requestSubscription);
+                        sender.sendReply(replyTopic, correlationId, reply, value, requestSubscription, delayedAt);
                     })
                     .get();
         } catch (ExecutionException e) {
@@ -79,7 +83,7 @@ class RequestListener<T, V> implements MessageListener<T> {
                 log.error("[{}] Error processing request", correlationId, e);
                 sender.sendErrorReply(replyTopic, correlationId,
                         cause.getClass().getName() + ": " + cause.getMessage(),
-                        value, requestSubscription);
+                        value, requestSubscription, delayedAt);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
