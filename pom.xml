@@ -63,6 +63,7 @@
         <module>pulsar-metrics-contrib</module>
         <module>pulsar-auth-contrib</module>
         <module>pulsar-rpc-contrib</module>
+        <module>pulsar-admin-mcp-contrib</module>
     </modules>
 
     <dependencyManagement>

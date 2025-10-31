@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "pulsar-admin": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "E:\\projects2\\pulsar-admin-mcp-contrib\\target\\mcp-contrib-1.0.0-SNAPSHOT.jar",
+        "--transport",
+        "stdio"
+      ],
+      "cwd": "E:\\projects2\\pulsar-admin-mcp-contrib",
+      "env": {
+        "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
+        "PULSAR_ADMIN_URL": "http://localhost:8080"
+      }
+    }
+  }
+}
