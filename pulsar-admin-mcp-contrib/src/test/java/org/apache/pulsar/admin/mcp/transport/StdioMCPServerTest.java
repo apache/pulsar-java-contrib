@@ -26,186 +26,166 @@ import org.testng.annotations.Test;
 
 public class StdioMCPServerTest {
 
-    @Mock
-    private PulsarClientManager mockPulsarClientManager;
+  @Mock private PulsarClientManager mockPulsarClientManager;
 
-    @Mock
-    private PulsarAdmin mockPulsarAdmin;
+  @Mock private PulsarAdmin mockPulsarAdmin;
 
-    @Mock
-    private PulsarClient mockPulsarClient;
+  @Mock private PulsarClient mockPulsarClient;
 
-    private StdioMCPServer server;
-    private AutoCloseable mocks;
+  private StdioMCPServer server;
+  private AutoCloseable mocks;
 
-    @BeforeMethod
-    public void setUp() {
-        this.mocks = MockitoAnnotations.openMocks(this);
-        this.server = new StdioMCPServer();
+  @BeforeMethod
+  public void setUp() {
+    this.mocks = MockitoAnnotations.openMocks(this);
+    this.server = new StdioMCPServer();
+  }
+
+  @AfterMethod
+  public void tearDown() throws Exception {
+    if (mocks != null) {
+      mocks.close();
     }
-
-    @AfterMethod
-    public void tearDown() throws Exception {
-        if (mocks != null) {
-            mocks.close();
-        }
-        if (server != null) {
-            try {
-                server.stop();
-            } catch (Exception ignore) {
-            }
-        }
-    }
-
-    @Test(
-            expectedExceptions = IllegalStateException.class,
-            expectedExceptionsMessageRegExp = ".*PulsarClientManager not injected.*"
-    )
-    public void start_shouldThrowException_whenPulsarClientManagerNotInjected() {
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-    }
-
-    @Test(
-            expectedExceptions = RuntimeException.class,
-            expectedExceptionsMessageRegExp = ".*Cannot start MCP server without Pulsar connection.*"
-    )
-    public void start_shouldThrowException_whenPulsarAdminInitializationFails() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenThrow(new RuntimeException("Admin init failed"));
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-    }
-
-    @Test(
-            expectedExceptions = RuntimeException.class,
-            expectedExceptionsMessageRegExp = ".*Cannot start MCP server without Pulsar connection.*"
-    )
-    public void start_shouldThrowException_whenPulsarClientInitializationFails() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenThrow(new RuntimeException("Client init failed"));
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-    }
-
-    @Test
-    public void start_shouldStartServerSuccessfully() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-
-        org.testng.Assert.assertNotNull(server);
-    }
-
-    @Test
-    public void start_shouldWarn_whenAlreadyRunning() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-
-        server.start(options);
-        server.start(options);
-
-        org.testng.Assert.assertNotNull(server);
-    }
-
-    @Test
-    public void stop_shouldStopServerSuccessfully() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-
+    if (server != null) {
+      try {
         server.stop();
-        org.mockito.Mockito.verify(mockPulsarClientManager).close();
+      } catch (Exception ignore) {
+      }
     }
+  }
 
-    @Test
-    public void stop_shouldHandleWhenNotStarted() {
-        server.stop();
-    }
+  @Test(
+      expectedExceptions = IllegalStateException.class,
+      expectedExceptionsMessageRegExp = ".*PulsarClientManager not injected.*")
+  public void start_shouldThrowException_whenPulsarClientManagerNotInjected() {
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+  }
 
-    @Test
-    public void stop_shouldBeIdempotent() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
+  @Test(
+      expectedExceptions = RuntimeException.class,
+      expectedExceptionsMessageRegExp = ".*Cannot start MCP server without Pulsar connection.*")
+  public void start_shouldThrowException_whenPulsarAdminInitializationFails() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
+        .thenThrow(new RuntimeException("Admin init failed"));
 
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+  }
 
-        server.stop();
-        server.stop();
-        server.stop();
+  @Test(
+      expectedExceptions = RuntimeException.class,
+      expectedExceptionsMessageRegExp = ".*Cannot start MCP server without Pulsar connection.*")
+  public void start_shouldThrowException_whenPulsarClientInitializationFails() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient())
+        .thenThrow(new RuntimeException("Client init failed"));
 
-        org.testng.Assert.assertNotNull(server);
-    }
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+  }
 
-    @Test
-    public void getType_shouldReturnStdio() {
-        org.testng.Assert.assertEquals(server.getType(), PulsarMCPCliOptions.TransportType.STDIO);
-    }
+  @Test
+  public void start_shouldStartServerSuccessfully() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
 
-    @Test
-    public void start_shouldHandleConcurrentCalls() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
 
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
+    org.testng.Assert.assertNotNull(server);
+  }
 
-        server.start(options);
-        server.start(options);
-        server.start(options);
+  @Test
+  public void start_shouldWarn_whenAlreadyRunning() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
 
-        org.testng.Assert.assertNotNull(server);
-    }
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
 
-    @Test
-    public void stop_shouldClosePulsarClientManager() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
+    server.start(options);
+    server.start(options);
 
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
+    org.testng.Assert.assertNotNull(server);
+  }
 
-        org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.times(0)).close();
+  @Test
+  public void stop_shouldStopServerSuccessfully() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
 
-        server.stop();
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
 
-        org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.times(1)).close();
-    }
+    server.stop();
+    org.mockito.Mockito.verify(mockPulsarClientManager).close();
+  }
 
-    private void injectPulsarClientManager() throws Exception {
-        Field field = AbstractMCPServer.class.getDeclaredField("pulsarClientManager");
-        field.setAccessible(true);
-        field.set(server, mockPulsarClientManager);
-    }
+  @Test
+  public void stop_shouldHandleWhenNotStarted() {
+    server.stop();
+  }
+
+  @Test
+  public void stop_shouldBeIdempotent() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+
+    server.stop();
+    server.stop();
+    server.stop();
+
+    org.testng.Assert.assertNotNull(server);
+  }
+
+  @Test
+  public void getType_shouldReturnStdio() {
+    org.testng.Assert.assertEquals(server.getType(), PulsarMCPCliOptions.TransportType.STDIO);
+  }
+
+  @Test
+  public void start_shouldHandleConcurrentCalls() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+
+    server.start(options);
+    server.start(options);
+    server.start(options);
+
+    org.testng.Assert.assertNotNull(server);
+  }
+
+  @Test
+  public void stop_shouldClosePulsarClientManager() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+
+    org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.times(0)).close();
+
+    server.stop();
+
+    org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.times(1)).close();
+  }
+
+  private void injectPulsarClientManager() throws Exception {
+    Field field = AbstractMCPServer.class.getDeclaredField("pulsarClientManager");
+    field.setAccessible(true);
+    field.set(server, mockPulsarClientManager);
+  }
 }
-

@@ -20,19 +20,18 @@ import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions.TransportType;
 
 public class TransportManager {
 
-    private final Map<TransportType, Transport> transports = new ConcurrentHashMap<>();
+  private final Map<TransportType, Transport> transports = new ConcurrentHashMap<>();
 
-    public void registerTransport(Transport transport) {
-        TransportType type = transport.getType();
-        transports.put(type, transport);
+  public void registerTransport(Transport transport) {
+    TransportType type = transport.getType();
+    transports.put(type, transport);
+  }
+
+  public void startTransport(TransportType type, PulsarMCPCliOptions options) throws Exception {
+    Transport transport = transports.get(type);
+    if (transport == null) {
+      throw new IllegalArgumentException("Transport not registered: " + type);
     }
-
-    public void startTransport(TransportType type, PulsarMCPCliOptions  options) throws Exception {
-        Transport transport = transports.get(type);
-        if (transport == null) {
-            throw new IllegalArgumentException("Transport not registered: " + type);
-        }
-        transport.start(options);
-    }
-
+    transport.start(options);
+  }
 }

@@ -23,77 +23,78 @@ import org.slf4j.LoggerFactory;
 
 public class StdioMCPServer extends AbstractMCPServer implements Transport {
 
-    private static final Logger logger = LoggerFactory.getLogger(StdioMCPServer.class);
-    private final AtomicBoolean running = new AtomicBoolean(false);
+  private static final Logger logger = LoggerFactory.getLogger(StdioMCPServer.class);
+  private final AtomicBoolean running = new AtomicBoolean(false);
 
-    public StdioMCPServer() {
-        super();
+  public StdioMCPServer() {
+    super();
+  }
+
+  @Override
+  public void start(PulsarMCPCliOptions options) {
+    if (!running.compareAndSet(false, true)) {
+      logger.warn("Stdio transport is already running");
+      return;
     }
 
-    @Override
-    public void start(PulsarMCPCliOptions options) {
-        if (!running.compareAndSet(false, true)) {
-            logger.warn("Stdio transport is already running");
-            return;
-        }
-
-        if (this.pulsarClientManager == null) {
-            running.set(false);
-            throw new IllegalStateException("PulsarClientManager not injected.");
-        }
-
-        try {
-            initializePulsar();
-        } catch (Exception e) {
-            running.set(false);
-            logger.error("Failed to initialize PulsarAdmin", e);
-            throw new RuntimeException("Cannot start MCP server without Pulsar connection. "
-                    + "Please ensure Pulsar is running at"
-                    + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"), e);
-        }
-
-        var mcpServer = McpServer.sync(new StdioServerTransportProvider())
-                .serverInfo("pulsar-admin-stdio", "1.0.0")
-                .capabilities(McpSchema.ServerCapabilities.builder().tools(true).build())
-                .build();
-
-        registerAllTools(mcpServer);
-
+    if (this.pulsarClientManager == null) {
+      running.set(false);
+      throw new IllegalStateException("PulsarClientManager not injected.");
     }
 
-
-    @Override
-    public void stop() {
-        if (!running.get()) {
-            return;
-        }
-
-        running.set(false);
-
-        if (pulsarClientManager != null) {
-            try {
-                pulsarClientManager.close();
-            } catch (Exception e) {
-                logger.warn("Error closing PulsarManager: {}", e.getMessage());
-            }
-        }
-
-        logger.info("Pulsar MCP server stopped successfully");
+    try {
+      initializePulsar();
+    } catch (Exception e) {
+      running.set(false);
+      logger.error("Failed to initialize PulsarAdmin", e);
+      throw new RuntimeException(
+          "Cannot start MCP server without Pulsar connection. "
+              + "Please ensure Pulsar is running at"
+              + System.getProperty("PULSAR_ADMIN_URL", "http://localhost:8080"),
+          e);
     }
 
-    @Override
-    public PulsarMCPCliOptions.TransportType getType() {
-        return PulsarMCPCliOptions.TransportType.STDIO;
+    var mcpServer =
+        McpServer.sync(new StdioServerTransportProvider())
+            .serverInfo("pulsar-admin-stdio", "1.0.0")
+            .capabilities(McpSchema.ServerCapabilities.builder().tools(true).build())
+            .build();
+
+    registerAllTools(mcpServer);
+  }
+
+  @Override
+  public void stop() {
+    if (!running.get()) {
+      return;
     }
 
-    public static void main(String[] args) {
-        try {
-            StdioMCPServer server = new StdioMCPServer();
-            PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(args);
-            server.start(options);
-        } catch (Exception e) {
-            logger.error("Error starting Pulsar MCP server: {}", e.getMessage(), e);
-            System.exit(1);
-        }
+    running.set(false);
+
+    if (pulsarClientManager != null) {
+      try {
+        pulsarClientManager.close();
+      } catch (Exception e) {
+        logger.warn("Error closing PulsarManager: {}", e.getMessage());
+      }
     }
+
+    logger.info("Pulsar MCP server stopped successfully");
+  }
+
+  @Override
+  public PulsarMCPCliOptions.TransportType getType() {
+    return PulsarMCPCliOptions.TransportType.STDIO;
+  }
+
+  public static void main(String[] args) {
+    try {
+      StdioMCPServer server = new StdioMCPServer();
+      PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(args);
+      server.start(options);
+    } catch (Exception e) {
+      logger.error("Error starting Pulsar MCP server: {}", e.getMessage(), e);
+      System.exit(1);
+    }
+  }
 }

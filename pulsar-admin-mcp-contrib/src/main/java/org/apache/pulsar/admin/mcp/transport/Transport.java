@@ -17,13 +17,13 @@ import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 
 public interface Transport {
 
-    void start(PulsarMCPCliOptions options) throws Exception;
+  void start(PulsarMCPCliOptions options) throws Exception;
 
-    void stop() throws Exception;
+  void stop() throws Exception;
 
-    PulsarMCPCliOptions.TransportType getType();
+  PulsarMCPCliOptions.TransportType getType();
 
-    default String getDescription(){
-        return getType().getDescription();
-    }
+  default String getDescription() {
+    return getType().getDescription();
+  }
 }

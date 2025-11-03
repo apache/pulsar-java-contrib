@@ -26,185 +26,168 @@ import org.testng.annotations.Test;
 
 public class HttpMCPServerTest {
 
-    @Mock
-    private PulsarClientManager mockPulsarClientManager;
+  @Mock private PulsarClientManager mockPulsarClientManager;
 
-    @Mock
-    private PulsarAdmin mockPulsarAdmin;
+  @Mock private PulsarAdmin mockPulsarAdmin;
 
-    @Mock
-    private PulsarClient mockPulsarClient;
+  @Mock private PulsarClient mockPulsarClient;
 
-    private HttpMCPServer server;
-    private AutoCloseable mocks;
+  private HttpMCPServer server;
+  private AutoCloseable mocks;
 
-    @BeforeMethod
-    public void setUp() {
-        this.mocks = MockitoAnnotations.openMocks(this);
-        this.server = new HttpMCPServer();
+  @BeforeMethod
+  public void setUp() {
+    this.mocks = MockitoAnnotations.openMocks(this);
+    this.server = new HttpMCPServer();
+  }
+
+  @AfterMethod
+  public void tearDown() throws Exception {
+    if (mocks != null) {
+      mocks.close();
     }
-
-    @AfterMethod
-    public void tearDown() throws Exception {
-        if (mocks != null) {
-            mocks.close();
-        }
-        if (server != null) {
-            try {
-                server.stop();
-            } catch (Exception ignore) {
-
-            }
-        }
-    }
-
-    @Test(
-            expectedExceptions = IllegalStateException.class,
-            expectedExceptionsMessageRegExp = ".*PulsarClientManager not injected.*"
-    )
-    public void start_shouldThrowException_whenPulsarClientManagerNotInjected() throws Exception {
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-    }
-
-    @Test(
-            expectedExceptions = RuntimeException.class,
-            expectedExceptionsMessageRegExp = ".*Failed to obtain PulsarAdmin from PulsarClientManager.*"
-    )
-    public void start_shouldThrowException_whenPulsarAdminInitializationFails() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenThrow(new RuntimeException("Admin init failed"));
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-    }
-
-    @Test(
-            expectedExceptions = RuntimeException.class,
-            expectedExceptionsMessageRegExp = ".*Failed to obtain PulsarAdmin from PulsarClientManager.*"
-    )
-    public void start_shouldThrowException_whenPulsarClientInitializationFails() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenThrow(new RuntimeException("Client init failed"));
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-        server.start(options);
-    }
-
-    @Test
-    public void start_shouldStartServerSuccessfully_whenMocked() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{"--port", "9999"});
-        server.start(options);
-        org.testng.Assert.assertNotNull(server);
-        org.mockito.Mockito.verify(mockPulsarClientManager).getAdmin();
-        org.mockito.Mockito.verify(mockPulsarClientManager).getClient();
-    }
-
-    @Test
-    public void start_shouldWarn_whenAlreadyRunning() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-
-        try {
-            server.start(options);
-            server.start(options);
-        } catch (Exception e) {
-            org.testng.Assert.assertNotNull(e);
-        }
-    }
-
-    @Test
-    public void stop_shouldStopServerSuccessfully() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
-
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-
-        try {
-            server.start(options);
-        } catch (Exception e) {
-
-        }
-
+    if (server != null) {
+      try {
         server.stop();
-        org.mockito.Mockito.verify(mockPulsarClientManager).close();
+      } catch (Exception ignore) {
+
+      }
+    }
+  }
+
+  @Test(
+      expectedExceptions = IllegalStateException.class,
+      expectedExceptionsMessageRegExp = ".*PulsarClientManager not injected.*")
+  public void start_shouldThrowException_whenPulsarClientManagerNotInjected() throws Exception {
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+  }
+
+  @Test(
+      expectedExceptions = RuntimeException.class,
+      expectedExceptionsMessageRegExp = ".*Failed to obtain PulsarAdmin from PulsarClientManager.*")
+  public void start_shouldThrowException_whenPulsarAdminInitializationFails() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
+        .thenThrow(new RuntimeException("Admin init failed"));
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+  }
+
+  @Test(
+      expectedExceptions = RuntimeException.class,
+      expectedExceptionsMessageRegExp = ".*Failed to obtain PulsarAdmin from PulsarClientManager.*")
+  public void start_shouldThrowException_whenPulsarClientInitializationFails() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient())
+        .thenThrow(new RuntimeException("Client init failed"));
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+    server.start(options);
+  }
+
+  @Test
+  public void start_shouldStartServerSuccessfully_whenMocked() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {"--port", "9999"});
+    server.start(options);
+    org.testng.Assert.assertNotNull(server);
+    org.mockito.Mockito.verify(mockPulsarClientManager).getAdmin();
+    org.mockito.Mockito.verify(mockPulsarClientManager).getClient();
+  }
+
+  @Test
+  public void start_shouldWarn_whenAlreadyRunning() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+
+    try {
+      server.start(options);
+      server.start(options);
+    } catch (Exception e) {
+      org.testng.Assert.assertNotNull(e);
+    }
+  }
+
+  @Test
+  public void stop_shouldStopServerSuccessfully() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+
+    try {
+      server.start(options);
+    } catch (Exception e) {
+
     }
 
-    @Test
-    public void stop_shouldHandleWhenNotStarted() {
-        server.stop();
+    server.stop();
+    org.mockito.Mockito.verify(mockPulsarClientManager).close();
+  }
+
+  @Test
+  public void stop_shouldHandleWhenNotStarted() {
+    server.stop();
+  }
+
+  @Test
+  public void stop_shouldBeIdempotent() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
+
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
+
+    try {
+      server.start(options);
+    } catch (Exception e) {
+
     }
+    server.stop();
+    server.stop();
+    server.stop();
 
-    @Test
-    public void stop_shouldBeIdempotent() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
+    org.testng.Assert.assertNotNull(server);
+  }
 
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
+  @Test
+  public void getType_shouldReturnHttp() {
+    org.testng.Assert.assertEquals(server.getType(), PulsarMCPCliOptions.TransportType.HTTP);
+  }
 
-        try {
-            server.start(options);
-        } catch (Exception e) {
+  @Test
+  public void stop_shouldClosePulsarClientManager() throws Exception {
+    injectPulsarClientManager();
+    org.mockito.Mockito.when(mockPulsarClientManager.getAdmin()).thenReturn(mockPulsarAdmin);
+    org.mockito.Mockito.when(mockPulsarClientManager.getClient()).thenReturn(mockPulsarClient);
 
-        }
-        server.stop();
-        server.stop();
-        server.stop();
+    PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[] {});
 
-        org.testng.Assert.assertNotNull(server);
+    try {
+      server.start(options);
+    } catch (Exception e) {
+
     }
+    org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.never()).close();
 
-    @Test
-    public void getType_shouldReturnHttp() {
-        org.testng.Assert.assertEquals(server.getType(), PulsarMCPCliOptions.TransportType.HTTP);
-    }
+    server.stop();
 
-    @Test
-    public void stop_shouldClosePulsarClientManager() throws Exception {
-        injectPulsarClientManager();
-        org.mockito.Mockito.when(mockPulsarClientManager.getAdmin())
-                .thenReturn(mockPulsarAdmin);
-        org.mockito.Mockito.when(mockPulsarClientManager.getClient())
-                .thenReturn(mockPulsarClient);
+    org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.times(1)).close();
+  }
 
-        PulsarMCPCliOptions options = PulsarMCPCliOptions.parseArgs(new String[]{});
-
-        try {
-            server.start(options);
-        } catch (Exception e) {
-
-        }
-        org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.never()).close();
-
-        server.stop();
-
-        org.mockito.Mockito.verify(mockPulsarClientManager, org.mockito.Mockito.times(1)).close();
-    }
-
-    private void injectPulsarClientManager() throws Exception {
-        Field field = AbstractMCPServer.class.getDeclaredField("pulsarClientManager");
-        field.setAccessible(true);
-        field.set(server, mockPulsarClientManager);
-    }
+  private void injectPulsarClientManager() throws Exception {
+    Field field = AbstractMCPServer.class.getDeclaredField("pulsarClientManager");
+    field.setAccessible(true);
+    field.set(server, mockPulsarClientManager);
+  }
 }

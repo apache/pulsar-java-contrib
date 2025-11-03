@@ -23,113 +23,115 @@ import org.springframework.stereotype.Component;
 @Component
 public class PulsarClientManager implements AutoCloseable {
 
-    private PulsarAdmin pulsarAdmin;
-    private PulsarClient pulsarClient;
+  private PulsarAdmin pulsarAdmin;
+  private PulsarClient pulsarClient;
 
-    private final AtomicBoolean adminInitialized = new AtomicBoolean();
-    private final AtomicBoolean clientInitialized = new AtomicBoolean();
+  private final AtomicBoolean adminInitialized = new AtomicBoolean();
+  private final AtomicBoolean clientInitialized = new AtomicBoolean();
 
-    public void initialize() {
-        getAdmin();
-        getClient();
+  public void initialize() {
+    getAdmin();
+    getClient();
+  }
+
+  public synchronized PulsarAdmin getAdmin() {
+    if (!adminInitialized.get()) {
+      initializePulsarAdmin();
+    }
+    return pulsarAdmin;
+  }
+
+  public synchronized PulsarClient getClient() {
+    if (!clientInitialized.get()) {
+      initializePulsarClient();
+    }
+    return pulsarClient;
+  }
+
+  private void initializePulsarAdmin() {
+
+    if (!adminInitialized.compareAndSet(false, true)) {
+      return;
     }
 
-    public synchronized PulsarAdmin getAdmin() {
-        if (!adminInitialized.get()) {
-            initializePulsarAdmin();
-        }
-        return pulsarAdmin;
-    }
+    boolean success = false;
+    try {
+      String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
 
-    public synchronized PulsarClient getClient() {
-        if (!clientInitialized.get()) {
-            initializePulsarClient();
-        }
-        return pulsarClient;
-    }
+      PulsarAdminBuilder adminBuilder =
+          PulsarAdmin.builder()
+              .serviceHttpUrl(adminUrl)
+              .connectionTimeout(30, TimeUnit.SECONDS)
+              .readTimeout(60, TimeUnit.SECONDS);
 
-    private void initializePulsarAdmin() {
+      pulsarAdmin = adminBuilder.build();
 
-        if (!adminInitialized.compareAndSet(false, true)) {
-            return;
-        }
+      pulsarAdmin.clusters().getClusters();
+      success = true;
 
-        boolean success = false;
+    } catch (Exception e) {
+      if (pulsarAdmin != null) {
         try {
-            String adminUrl = System.getenv().getOrDefault("PULSAR_ADMIN_URL", "http://localhost:8080");
+          pulsarAdmin.close();
+        } catch (Exception ignore) {
 
-            PulsarAdminBuilder adminBuilder = PulsarAdmin.builder()
-                    .serviceHttpUrl(adminUrl)
-                    .connectionTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(60, TimeUnit.SECONDS);
-
-            pulsarAdmin = adminBuilder.build();
-
-            pulsarAdmin.clusters().getClusters();
-            success = true;
-
-        } catch (Exception e) {
-            if (pulsarAdmin != null) {
-                try {
-                    pulsarAdmin.close();
-                } catch (Exception ignore) {
-
-                }
-                pulsarAdmin = null;
-            }
-            adminInitialized.set(false);
-            throw new RuntimeException("Failed to initialize PulsarAdmin", e);
-        } finally {
-            if (!success) {
-                adminInitialized.set(false);
-            }
         }
-    }
-
-    private void initializePulsarClient()  {
-        if (!clientInitialized.compareAndSet(false, true)) {
-            return;
-        }
-        boolean success = false;
-        try {
-            String serviceUrl = System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
-
-            var clientBuilder = PulsarClient.builder()
-                    .serviceUrl(serviceUrl)
-                    .operationTimeout(30, TimeUnit.SECONDS)
-                    .connectionTimeout(30, TimeUnit.SECONDS)
-                    .keepAliveInterval(30, TimeUnit.SECONDS);
-
-            this.pulsarClient = clientBuilder.build();
-            success = true;
-
-        } catch (Exception e) {
-            if (pulsarClient != null) {
-                try {
-                    pulsarClient.close();
-                } catch (Exception ignore) {
-                }
-                pulsarClient = null;
-            }
-            clientInitialized.set(false);
-            throw new RuntimeException("Failed to initialize PulsarClient", e);
-        } finally {
-            if (!success) {
-                clientInitialized.set(false);
-            }
-        }
-    }
-
-    @Override
-    public void close() throws Exception {
-        if (pulsarClient != null) {
-            pulsarClient.close();
-        }
-        if (pulsarAdmin != null) {
-            pulsarAdmin.close();
-        }
+        pulsarAdmin = null;
+      }
+      adminInitialized.set(false);
+      throw new RuntimeException("Failed to initialize PulsarAdmin", e);
+    } finally {
+      if (!success) {
         adminInitialized.set(false);
-        clientInitialized.set(false);
+      }
     }
+  }
 
+  private void initializePulsarClient() {
+    if (!clientInitialized.compareAndSet(false, true)) {
+      return;
+    }
+    boolean success = false;
+    try {
+      String serviceUrl =
+          System.getenv().getOrDefault("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
+
+      var clientBuilder =
+          PulsarClient.builder()
+              .serviceUrl(serviceUrl)
+              .operationTimeout(30, TimeUnit.SECONDS)
+              .connectionTimeout(30, TimeUnit.SECONDS)
+              .keepAliveInterval(30, TimeUnit.SECONDS);
+
+      this.pulsarClient = clientBuilder.build();
+      success = true;
+
+    } catch (Exception e) {
+      if (pulsarClient != null) {
+        try {
+          pulsarClient.close();
+        } catch (Exception ignore) {
+        }
+        pulsarClient = null;
+      }
+      clientInitialized.set(false);
+      throw new RuntimeException("Failed to initialize PulsarClient", e);
+    } finally {
+      if (!success) {
+        clientInitialized.set(false);
+      }
+    }
+  }
+
+  @Override
+  public void close() throws Exception {
+    if (pulsarClient != null) {
+      pulsarClient.close();
+    }
+    if (pulsarAdmin != null) {
+      pulsarAdmin.close();
+    }
+    adminInitialized.set(false);
+    clientInitialized.set(false);
+  }
 }

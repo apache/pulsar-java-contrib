@@ -22,7 +22,6 @@
         <artifactId>pulsar-java-contrib</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <inceptionYear>2024</inceptionYear>
 
     <artifactId>pulsar-client-common-contrib</artifactId>
 
@@ -32,5 +31,6 @@
             <artifactId>pulsar-client-all</artifactId>
         </dependency>
     </dependencies>
+    <inceptionYear>2024</inceptionYear>
 
 </project>

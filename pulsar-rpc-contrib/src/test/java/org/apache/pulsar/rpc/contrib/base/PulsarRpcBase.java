@@ -14,6 +14,7 @@
 package org.apache.pulsar.rpc.contrib.base;
 
 import static java.util.UUID.randomUUID;
+
 import java.time.Duration;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -26,59 +27,57 @@ import org.apache.pulsar.rpc.contrib.server.PulsarRpcServer;
 
 @Setter
 public abstract class PulsarRpcBase {
-    protected final Supplier<String> correlationIdSupplier = () -> randomUUID().toString();
-    protected final String topicPrefix = "persistent://public/default/";
-    // protected final String topicPrefix = "public/default/";
-    protected String requestTopic;
-    protected String replyTopic;
-    protected Pattern requestTopicPattern;
-    protected Pattern replyTopicPattern;
-    protected String requestSubBase;
-    protected String replySubBase;
-    protected Duration replyTimeout = Duration.ofSeconds(3);
-    protected final String synchronousMessage = "SynchronousRequest";
-    protected final String asynchronousMessage = "AsynchronousRequest";
-    protected final Schema<TestRequest> requestSchema = Schema.JSON(TestRequest.class);
-    protected final Schema<TestReply> replySchema = Schema.JSON(TestReply.class);
-    protected final int messageNum = 10;
+  protected final Supplier<String> correlationIdSupplier = () -> randomUUID().toString();
+  protected final String topicPrefix = "persistent://public/default/";
+  // protected final String topicPrefix = "public/default/";
+  protected String requestTopic;
+  protected String replyTopic;
+  protected Pattern requestTopicPattern;
+  protected Pattern replyTopicPattern;
+  protected String requestSubBase;
+  protected String replySubBase;
+  protected Duration replyTimeout = Duration.ofSeconds(3);
+  protected final String synchronousMessage = "SynchronousRequest";
+  protected final String asynchronousMessage = "AsynchronousRequest";
+  protected final Schema<TestRequest> requestSchema = Schema.JSON(TestRequest.class);
+  protected final Schema<TestReply> replySchema = Schema.JSON(TestReply.class);
+  protected final int messageNum = 10;
 
-    protected PulsarAdmin pulsarAdmin;
-    protected PulsarClient pulsarClient;
-    protected PulsarRpcClient<TestRequest, TestReply> rpcClient;
-    protected PulsarRpcServer<TestRequest, TestReply> rpcServer;
+  protected PulsarAdmin pulsarAdmin;
+  protected PulsarClient pulsarClient;
+  protected PulsarRpcClient<TestRequest, TestReply> rpcClient;
+  protected PulsarRpcServer<TestRequest, TestReply> rpcServer;
 
-    protected final void internalSetup() throws Exception {
-        pulsarAdmin = SingletonPulsarContainer.createPulsarAdmin();
-        pulsarClient = SingletonPulsarContainer.createPulsarClient();
+  protected final void internalSetup() throws Exception {
+    pulsarAdmin = SingletonPulsarContainer.createPulsarAdmin();
+    pulsarClient = SingletonPulsarContainer.createPulsarClient();
+  }
+
+  protected final void internalCleanup() throws Exception {
+    pulsarClient.close();
+    pulsarAdmin.topics().deletePartitionedTopic(requestTopic);
+    pulsarAdmin.topics().deletePartitionedTopic(replyTopic);
+    pulsarAdmin.close();
+    if (rpcServer != null) {
+      rpcServer.close();
     }
-
-    protected final void internalCleanup() throws Exception {
-        pulsarClient.close();
-        pulsarAdmin.topics().deletePartitionedTopic(requestTopic);
-        pulsarAdmin.topics().deletePartitionedTopic(replyTopic);
-        pulsarAdmin.close();
-        if (rpcServer != null) {
-            rpcServer.close();
-        }
-        if (rpcClient != null) {
-            rpcClient.close();
-        }
+    if (rpcClient != null) {
+      rpcClient.close();
     }
+  }
 
-    protected void setupTopic(String topicBase) throws Exception {
-        this.requestTopic = topicBase + "-request";
-        this.replyTopic = topicBase + "-reply";
-        this.requestTopicPattern = Pattern.compile(topicPrefix + requestTopic + ".*");
-        this.replyTopicPattern = Pattern.compile(topicPrefix + replyTopic + ".*");
-        this.requestSubBase = requestTopic + "-sub";
-        this.replySubBase = replyTopic + "-sub";
-        pulsarAdmin.topics().createPartitionedTopic(requestTopic, 10);
-        pulsarAdmin.topics().createPartitionedTopic(replyTopic, 10);
-    }
+  protected void setupTopic(String topicBase) throws Exception {
+    this.requestTopic = topicBase + "-request";
+    this.replyTopic = topicBase + "-reply";
+    this.requestTopicPattern = Pattern.compile(topicPrefix + requestTopic + ".*");
+    this.replyTopicPattern = Pattern.compile(topicPrefix + replyTopic + ".*");
+    this.requestSubBase = requestTopic + "-sub";
+    this.replySubBase = replyTopic + "-sub";
+    pulsarAdmin.topics().createPartitionedTopic(requestTopic, 10);
+    pulsarAdmin.topics().createPartitionedTopic(replyTopic, 10);
+  }
 
-    public record TestRequest(String value) {
-    }
+  public record TestRequest(String value) {}
 
-    public record TestReply(String value) {
-    }
+  public record TestReply(String value) {}
 }

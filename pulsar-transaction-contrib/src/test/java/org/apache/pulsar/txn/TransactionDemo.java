@@ -38,15 +38,18 @@ public class TransactionDemo {
     // Create a Transaction object
     // Use TransactionFactory to create a transaction object with a timeout of 5 seconds
     Transaction transaction =
-            TransactionFactory.createTransaction(client, 5, TimeUnit.SECONDS).get();
+        TransactionFactory.createTransaction(client, 5, TimeUnit.SECONDS).get();
 
     // Create producers and a consumer
     // Create two producers to send messages to different topics
-    Producer<String> producerToPubTopic = client.newProducer(Schema.STRING).topic(pubTopic).create();
-    Producer<String> producerToSubTopic = client.newProducer(Schema.STRING).topic(subTopic).create();
+    Producer<String> producerToPubTopic =
+        client.newProducer(Schema.STRING).topic(pubTopic).create();
+    Producer<String> producerToSubTopic =
+        client.newProducer(Schema.STRING).topic(subTopic).create();
 
     // Create a consumer to receive messages from the subTopic
-    Consumer<String> consumerFromSubTopic = client
+    Consumer<String> consumerFromSubTopic =
+        client
             .newConsumer(Schema.STRING)
             .subscriptionName(subscription)
             .topic(subTopic)
