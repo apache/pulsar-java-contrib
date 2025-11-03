@@ -12,17 +12,20 @@
  * limitations under the License.
  */
 /**
- * This package provides common utilities and constants used across the Apache Pulsar RPC extensions.
- * It includes helper classes for managing RPC message flows and configurations.
+ * This package provides common utilities and constants used across the Apache Pulsar RPC
+ * extensions. It includes helper classes for managing RPC message flows and configurations.
  *
- * <p>Features include:</p>
+ * <p>Features include:
+ *
  * <ul>
- *     <li>{@link org.apache.pulsar.rpc.contrib.common.Constants} - Constants for message properties and
- *     configurations.
- *     <li>{@link org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory} - Factory methods for configuring
- *     Pulsar producers and consumers tailored for RPC operations.
- *     <li>{@link org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException} - Exception on PulsarRpc client side.
- *     <li>{@link org.apache.pulsar.rpc.contrib.common.PulsarRpcServerException} - Exception on PulsarRpc server side.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.common.Constants} - Constants for message properties
+ *       and configurations.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.common.MessageDispatcherFactory} - Factory methods for
+ *       configuring Pulsar producers and consumers tailored for RPC operations.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.common.PulsarRpcClientException} - Exception on
+ *       PulsarRpc client side.
+ *   <li>{@link org.apache.pulsar.rpc.contrib.common.PulsarRpcServerException} - Exception on
+ *       PulsarRpc server side.
  * </ul>
  */
 package org.apache.pulsar.rpc.contrib.common;

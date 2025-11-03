@@ -19,167 +19,164 @@ import org.testng.annotations.Test;
 
 public class PulsarClientManagerTest {
 
-    private PulsarClientManager manager;
-    private String originalAdminUrl;
-    private String originalServiceUrl;
+  private PulsarClientManager manager;
+  private String originalAdminUrl;
+  private String originalServiceUrl;
 
-    @BeforeMethod
-    public void setUp() {
-        manager = new PulsarClientManager();
+  @BeforeMethod
+  public void setUp() {
+    manager = new PulsarClientManager();
 
-        originalAdminUrl = System.getenv("PULSAR_ADMIN_URL");
-        originalServiceUrl = System.getenv("PULSAR_SERVICE_URL");
+    originalAdminUrl = System.getenv("PULSAR_ADMIN_URL");
+    originalServiceUrl = System.getenv("PULSAR_SERVICE_URL");
 
-        System.clearProperty("PULSAR_ADMIN_URL");
-        System.clearProperty("PULSAR_SERVICE_URL");
-    }
+    System.clearProperty("PULSAR_ADMIN_URL");
+    System.clearProperty("PULSAR_SERVICE_URL");
+  }
 
-    @AfterMethod
-    public void tearDown() {
-        if (manager != null) {
-            try {
-                manager.close();
-            } catch (Exception ignore) {
-            }
-        }
-        if (originalAdminUrl != null) {
-            System.setProperty("PULSAR_ADMIN_URL", originalAdminUrl);
-        } else {
-            System.clearProperty("PULSAR_ADMIN_URL");
-        }
-
-        if (originalServiceUrl != null) {
-            System.setProperty("PULSAR_SERVICE_URL", originalServiceUrl);
-        } else {
-            System.clearProperty("PULSAR_SERVICE_URL");
-        }
-    }
-
-    @Test(
-            expectedExceptions = RuntimeException.class,
-            expectedExceptionsMessageRegExp = ".*Failed to initialize PulsarAdmin.*"
-    )
-    public void initialize_shouldThrowException_whenPulsarNotRunning() {
-        System.setProperty("PULSAR_ADMIN_URL", "http://localhost:99999");
-        System.setProperty("PULSAR_SERVICE_URL", "pulsar://localhost:99999");
-
-        manager.initialize();
-    }
-
-    @Test
-    public void getClient_shouldNotThrowException_whenPulsarNotRunning() {
-        System.setProperty("PULSAR_ADMIN_URL", "http://localhost:8080");
-        System.setProperty("PULSAR_SERVICE_URL", "pulsar://localhost:99999");
-
-        try {
-            org.apache.pulsar.client.api.PulsarClient client = manager.getClient();
-            org.testng.Assert.assertNotNull(client);
-        } catch (Exception e) {
-            org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarClient"));
-        }
-    }
-
-    @Test
-    public void close_shouldCloseBothAdminAndClient() throws Exception {
-        PulsarClientManager testManager = new PulsarClientManager();
-
-        testManager.close();
-
-        testManager.close();
-    }
-
-    @Test
-    public void initialize_shouldSetDefaultUrls() {
-        try {
-            manager.initialize();
-            org.testng.Assert.fail("Expected exception for missing Pulsar connection");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertTrue(
-                e.getMessage().contains("Failed to initialize PulsarAdmin")
-            );
-        }
-    }
-
-    @Test
-    public void getAdmin_shouldUseDefaultUrl() {
-        try {
-            manager.getAdmin();
-            org.testng.Assert.fail("Expected exception");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
-        }
-    }
-
-    @Test
-    public void getAdmin_shouldUseEnvVarWhenSet() {
-        System.setProperty("PULSAR_ADMIN_URL", "http://localhost:8080");
-
-        try {
-            manager.getAdmin();
-            org.testng.Assert.fail("Expected exception");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
-        }
-    }
-
-    @Test
-    public void getClient_shouldUseDefaultUrl() {
-        org.apache.pulsar.client.api.PulsarClient client = manager.getClient();
-        org.testng.Assert.assertNotNull(client);
-    }
-
-    @Test
-    public void getClient_shouldUseEnvVarWhenSet() {
-        System.setProperty("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
-
-        org.apache.pulsar.client.api.PulsarClient client = manager.getClient();
-        org.testng.Assert.assertNotNull(client);
-    }
-
-    @Test
-    public void initialize_shouldCallGetAdminAndGetClient() {
-        try {
-            manager.initialize();
-            org.testng.Assert.fail("Expected exception");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertNotNull(e.getMessage());
-        }
-    }
-
-    @Test
-    public void close_shouldBeIdempotent() throws Exception {
+  @AfterMethod
+  public void tearDown() {
+    if (manager != null) {
+      try {
         manager.close();
-        manager.close();
-        manager.close();
+      } catch (Exception ignore) {
+      }
+    }
+    if (originalAdminUrl != null) {
+      System.setProperty("PULSAR_ADMIN_URL", originalAdminUrl);
+    } else {
+      System.clearProperty("PULSAR_ADMIN_URL");
     }
 
-    @Test
-    public void initialize_shouldHandleInvalidUrl() {
-        System.setProperty("PULSAR_ADMIN_URL", "invalid-url");
-        System.setProperty("PULSAR_SERVICE_URL", "invalid-url");
+    if (originalServiceUrl != null) {
+      System.setProperty("PULSAR_SERVICE_URL", originalServiceUrl);
+    } else {
+      System.clearProperty("PULSAR_SERVICE_URL");
+    }
+  }
 
-        try {
-            manager.initialize();
-            org.testng.Assert.fail("Expected exception");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize"));
-        }
+  @Test(
+      expectedExceptions = RuntimeException.class,
+      expectedExceptionsMessageRegExp = ".*Failed to initialize PulsarAdmin.*")
+  public void initialize_shouldThrowException_whenPulsarNotRunning() {
+    System.setProperty("PULSAR_ADMIN_URL", "http://localhost:99999");
+    System.setProperty("PULSAR_SERVICE_URL", "pulsar://localhost:99999");
+
+    manager.initialize();
+  }
+
+  @Test
+  public void getClient_shouldNotThrowException_whenPulsarNotRunning() {
+    System.setProperty("PULSAR_ADMIN_URL", "http://localhost:8080");
+    System.setProperty("PULSAR_SERVICE_URL", "pulsar://localhost:99999");
+
+    try {
+      org.apache.pulsar.client.api.PulsarClient client = manager.getClient();
+      org.testng.Assert.assertNotNull(client);
+    } catch (Exception e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarClient"));
+    }
+  }
+
+  @Test
+  public void close_shouldCloseBothAdminAndClient() throws Exception {
+    PulsarClientManager testManager = new PulsarClientManager();
+
+    testManager.close();
+
+    testManager.close();
+  }
+
+  @Test
+  public void initialize_shouldSetDefaultUrls() {
+    try {
+      manager.initialize();
+      org.testng.Assert.fail("Expected exception for missing Pulsar connection");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
+    }
+  }
+
+  @Test
+  public void getAdmin_shouldUseDefaultUrl() {
+    try {
+      manager.getAdmin();
+      org.testng.Assert.fail("Expected exception");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
+    }
+  }
+
+  @Test
+  public void getAdmin_shouldUseEnvVarWhenSet() {
+    System.setProperty("PULSAR_ADMIN_URL", "http://localhost:8080");
+
+    try {
+      manager.getAdmin();
+      org.testng.Assert.fail("Expected exception");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
+    }
+  }
+
+  @Test
+  public void getClient_shouldUseDefaultUrl() {
+    org.apache.pulsar.client.api.PulsarClient client = manager.getClient();
+    org.testng.Assert.assertNotNull(client);
+  }
+
+  @Test
+  public void getClient_shouldUseEnvVarWhenSet() {
+    System.setProperty("PULSAR_SERVICE_URL", "pulsar://localhost:6650");
+
+    org.apache.pulsar.client.api.PulsarClient client = manager.getClient();
+    org.testng.Assert.assertNotNull(client);
+  }
+
+  @Test
+  public void initialize_shouldCallGetAdminAndGetClient() {
+    try {
+      manager.initialize();
+      org.testng.Assert.fail("Expected exception");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertNotNull(e.getMessage());
+    }
+  }
+
+  @Test
+  public void close_shouldBeIdempotent() throws Exception {
+    manager.close();
+    manager.close();
+    manager.close();
+  }
+
+  @Test
+  public void initialize_shouldHandleInvalidUrl() {
+    System.setProperty("PULSAR_ADMIN_URL", "invalid-url");
+    System.setProperty("PULSAR_SERVICE_URL", "invalid-url");
+
+    try {
+      manager.initialize();
+      org.testng.Assert.fail("Expected exception");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize"));
+    }
+  }
+
+  @Test
+  public void singletonBehavior_shouldReturnSameInstance() {
+    try {
+      manager.getAdmin();
+      org.testng.Assert.fail("Expected exception");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
     }
 
-    @Test
-    public void singletonBehavior_shouldReturnSameInstance() {
-        try {
-            manager.getAdmin();
-            org.testng.Assert.fail("Expected exception");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
-        }
-
-        try {
-            manager.getAdmin();
-            org.testng.Assert.fail("Expected exception");
-        } catch (RuntimeException e) {
-            org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
-        }
+    try {
+      manager.getAdmin();
+      org.testng.Assert.fail("Expected exception");
+    } catch (RuntimeException e) {
+      org.testng.Assert.assertTrue(e.getMessage().contains("Failed to initialize PulsarAdmin"));
     }
+  }
 }

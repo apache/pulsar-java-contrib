@@ -19,52 +19,55 @@ import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 
 public class TransportLauncher {
 
-    public static void start(PulsarMCPCliOptions options)  throws Exception {
-        startTransport(options);
+  public static void start(PulsarMCPCliOptions options) throws Exception {
+    startTransport(options);
+  }
+
+  private static void startTransport(PulsarMCPCliOptions options) throws Exception {
+    TransportManager transportManager = new TransportManager();
+
+    StdioMCPServer stdio = new StdioMCPServer();
+    HttpMCPServer http = new HttpMCPServer();
+
+    PulsarClientManager manager = new PulsarClientManager();
+    manager.initialize();
+    stdio.injectClientManager(manager);
+    http.injectClientManager(manager);
+
+    transportManager.registerTransport(stdio);
+    transportManager.registerTransport(http);
+
+    final PulsarMCPCliOptions.TransportType chosen = options.getTransport();
+    final Transport[] started = new Transport[1];
+
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread(
+                () -> {
+                  if (started[0] != null) {
+                    try {
+                      started[0].stop();
+                    } catch (Exception e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+                  try {
+                    manager.close();
+                  } catch (Exception ignore) {
+
+                  }
+                },
+                "pulsar-manager-shutdown"));
+
+    switch (chosen) {
+      case HTTP -> {
+        transportManager.startTransport(PulsarMCPCliOptions.TransportType.HTTP, options);
+        started[0] = http;
+      }
+      case STDIO -> {
+        transportManager.startTransport(PulsarMCPCliOptions.TransportType.STDIO, options);
+        started[0] = stdio;
+      }
     }
-
-    private static void startTransport(PulsarMCPCliOptions options) throws Exception {
-        TransportManager transportManager = new TransportManager();
-
-        StdioMCPServer stdio = new StdioMCPServer();
-        HttpMCPServer http = new HttpMCPServer();
-
-        PulsarClientManager manager = new PulsarClientManager();
-        manager.initialize();
-        stdio.injectClientManager(manager);
-        http.injectClientManager(manager);
-
-        transportManager.registerTransport(stdio);
-        transportManager.registerTransport(http);
-
-        final PulsarMCPCliOptions.TransportType chosen = options.getTransport();
-        final Transport[] started = new Transport[1];
-
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (started[0] != null) {
-                try {
-                    started[0].stop();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            try {
-                manager.close();
-            } catch (Exception ignore) {
-
-            }
-        }, "pulsar-manager-shutdown"));
-
-        switch (chosen) {
-            case HTTP -> {
-                transportManager.startTransport(PulsarMCPCliOptions.TransportType.HTTP, options);
-                started[0] = http;
-            }
-            case STDIO -> {
-                transportManager.startTransport(PulsarMCPCliOptions.TransportType.STDIO, options);
-                started[0] = stdio;
-            }
-        }
-    }
+  }
 }

@@ -21,7 +21,7 @@
         <artifactId>pulsar-java-contrib</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <inceptionYear>2024</inceptionYear>
 
     <artifactId>pulsar-metrics-contrib</artifactId>
+    <inceptionYear>2024</inceptionYear>
 </project>

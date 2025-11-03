@@ -21,13 +21,25 @@
         <artifactId>apache</artifactId>
         <version>29</version>
     </parent>
-    <version>1.0.0-SNAPSHOT</version>
-
-    <inceptionYear>2024</inceptionYear>
 
     <artifactId>pulsar-java-contrib</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Pulsar Java Contrib</name>
+
+    <modules>
+        <module>pulsar-client-common-contrib</module>
+        <module>pulsar-loadbalance-contrib</module>
+        <module>pulsar-interceptor-contrib</module>
+        <module>pulsar-connector-contrib</module>
+        <module>pulsar-function-contrib</module>
+        <module>pulsar-bookkeeper-contrib</module>
+        <module>pulsar-transaction-contrib</module>
+        <module>pulsar-metrics-contrib</module>
+        <module>pulsar-auth-contrib</module>
+        <module>pulsar-rpc-contrib</module>
+        <module>pulsar-admin-mcp-contrib</module>
+    </modules>
 
     <properties>
         <lombok.version>1.18.32</lombok.version>
@@ -51,20 +63,6 @@
         <junit.version>4.13.1</junit.version>
         <mockito.version>5.12.0</mockito.version>
     </properties>
-
-    <modules>
-        <module>pulsar-client-common-contrib</module>
-        <module>pulsar-loadbalance-contrib</module>
-        <module>pulsar-interceptor-contrib</module>
-        <module>pulsar-connector-contrib</module>
-        <module>pulsar-function-contrib</module>
-        <module>pulsar-bookkeeper-contrib</module>
-        <module>pulsar-transaction-contrib</module>
-        <module>pulsar-metrics-contrib</module>
-        <module>pulsar-auth-contrib</module>
-        <module>pulsar-rpc-contrib</module>
-        <module>pulsar-admin-mcp-contrib</module>
-    </modules>
 
     <dependencyManagement>
         <dependencies>
@@ -103,6 +101,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
@@ -122,34 +126,9 @@
             <version>${org.testing.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>${awaitility.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-wrapper-plugin</artifactId>
-                <version>${maven-wrapper-plugin.version}</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
             <!-- Spotless Plugin -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
@@ -191,36 +170,6 @@
                     <execution>
                         <goals>
                             <goal>apply</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Checkstyle Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>${maven-checkstyle-plugin.version}</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.puppycrawl.tools</groupId>
-                        <artifactId>checkstyle</artifactId>
-                        <version>${puppycrawl.checkstyle.version}</version>
-                    </dependency>
-                </dependencies>
-                <configuration>
-                    <configLocation>./src/main/resources/checkstyle.xml</configLocation>
-                    <suppressionsLocation>./src/main/resources/suppressions.xml</suppressionsLocation>
-                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
-                    <encoding>UTF-8</encoding>
-                    <excludes>**/*.proto</excludes>
-                    <!-- Example exclusion -->
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>validate-checkstyle</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -267,6 +216,57 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Checkstyle Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${maven-checkstyle-plugin.version}</version>
+                <configuration>
+                    <configLocation>./src/main/resources/checkstyle.xml</configLocation>
+                    <suppressionsLocation>./src/main/resources/suppressions.xml</suppressionsLocation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <encoding>UTF-8</encoding>
+                    <excludes>**/*.proto</excludes>
+                    <!-- Example exclusion -->
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${puppycrawl.checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>validate-checkstyle</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-wrapper-plugin</artifactId>
+                <version>${maven-wrapper-plugin.version}</version>
+            </plugin>
         </plugins>
     </build>
+
+    <inceptionYear>2024</inceptionYear>
 </project>

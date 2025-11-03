@@ -22,31 +22,33 @@ import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 
 /**
- * Handles the sending of request messages to a specified Pulsar topic. This class encapsulates the details of
- * setting message properties related to the reply handling and timeout management before sending the messages
- * asynchronously.
+ * Handles the sending of request messages to a specified Pulsar topic. This class encapsulates the
+ * details of setting message properties related to the reply handling and timeout management before
+ * sending the messages asynchronously.
  *
  * @param <T> The type of the payload of the request messages that this sender will handle.
  */
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class RequestSender<T> {
-    private final String replyTopic;
+  private final String replyTopic;
 
-    /**
-     * Sends a request message asynchronously to request-topic specified during this object's construction.
-     * This method adds necessary properties to the message such as the reply topic and the request timeout before
-     * sending it.
-     *
-     * @param message The {@link TypedMessageBuilder} for building the message to be sent, allowing additional
-     *                properties to be set before dispatch.
-     * @param millis The timeout in milliseconds after which the request should be considered failed if no reply
-     *               is received.
-     * @return A {@link CompletableFuture} that will complete with the {@link MessageId} of the sent message once
-     *         it has been successfully dispatched or will complete exceptionally if the send fails.
-     */
-    CompletableFuture<MessageId> sendRequest(TypedMessageBuilder<T> message, long millis) {
-        return message.property(REPLY_TOPIC, replyTopic)
-                .property(REQUEST_TIMEOUT_MILLIS, String.valueOf(millis))
-                .sendAsync();
-    }
+  /**
+   * Sends a request message asynchronously to request-topic specified during this object's
+   * construction. This method adds necessary properties to the message such as the reply topic and
+   * the request timeout before sending it.
+   *
+   * @param message The {@link TypedMessageBuilder} for building the message to be sent, allowing
+   *     additional properties to be set before dispatch.
+   * @param millis The timeout in milliseconds after which the request should be considered failed
+   *     if no reply is received.
+   * @return A {@link CompletableFuture} that will complete with the {@link MessageId} of the sent
+   *     message once it has been successfully dispatched or will complete exceptionally if the send
+   *     fails.
+   */
+  CompletableFuture<MessageId> sendRequest(TypedMessageBuilder<T> message, long millis) {
+    return message
+        .property(REPLY_TOPIC, replyTopic)
+        .property(REQUEST_TIMEOUT_MILLIS, String.valueOf(millis))
+        .sendAsync();
+  }
 }

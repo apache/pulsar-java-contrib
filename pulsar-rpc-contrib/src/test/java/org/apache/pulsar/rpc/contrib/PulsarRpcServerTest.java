@@ -29,71 +29,79 @@ import org.testng.annotations.Test;
 @Slf4j
 public class PulsarRpcServerTest extends PulsarRpcBase {
 
-    @BeforeMethod(alwaysRun = true)
-    protected void setup() throws Exception {
-        super.internalSetup();
-    }
+  @BeforeMethod(alwaysRun = true)
+  protected void setup() throws Exception {
+    super.internalSetup();
+  }
 
-    @AfterMethod(alwaysRun = true)
-    protected void cleanup() throws Exception {
-        super.internalCleanup();
-    }
+  @AfterMethod(alwaysRun = true)
+  protected void cleanup() throws Exception {
+    super.internalCleanup();
+  }
 
-    @Test
-    public void testPulsarRpcServer() throws Exception {
-        setupTopic("testPulsarRpcServer");
-        final int defaultEpoch = 1;
-        AtomicInteger epoch = new AtomicInteger(defaultEpoch);
+  @Test
+  public void testPulsarRpcServer() throws Exception {
+    setupTopic("testPulsarRpcServer");
+    final int defaultEpoch = 1;
+    AtomicInteger epoch = new AtomicInteger(defaultEpoch);
 
-        // What do we do when we receive the request message
-        Function<TestRequest, CompletableFuture<TestReply>> requestFunction = request -> {
-            epoch.getAndIncrement();
-            return CompletableFuture.completedFuture(new TestReply(request.value() + "-----------done"));
+    // What do we do when we receive the request message
+    Function<TestRequest, CompletableFuture<TestReply>> requestFunction =
+        request -> {
+          epoch.getAndIncrement();
+          return CompletableFuture.completedFuture(
+              new TestReply(request.value() + "-----------done"));
         };
 
-        // If the server side is stateful, an error occurs after the server side executes 3-1, and a mechanism for
-        // checking and rolling back needs to be provided.
-        BiConsumer<String, TestRequest> rollbackFunction = (id, request) -> {
-            if (epoch.get() != defaultEpoch) {
-                epoch.set(defaultEpoch);
-            }
+    // If the server side is stateful, an error occurs after the server side executes 3-1, and a
+    // mechanism for
+    // checking and rolling back needs to be provided.
+    BiConsumer<String, TestRequest> rollbackFunction =
+        (id, request) -> {
+          if (epoch.get() != defaultEpoch) {
+            epoch.set(defaultEpoch);
+          }
         };
 
-        PulsarRpcServerBuilder<TestRequest, TestReply> rpcServerBuilder =
-                PulsarRpcServer.builder(requestSchema, replySchema)
-                        .requestSubscription(requestSubBase)
-                        .patternAutoDiscoveryInterval(Duration.ofSeconds(1));
-        rpcServerBuilder.requestTopic(requestTopic);
-        rpcServer = rpcServerBuilder.build(pulsarClient, requestFunction, rollbackFunction);
-        Thread.sleep(3000);
-    }
+    PulsarRpcServerBuilder<TestRequest, TestReply> rpcServerBuilder =
+        PulsarRpcServer.builder(requestSchema, replySchema)
+            .requestSubscription(requestSubBase)
+            .patternAutoDiscoveryInterval(Duration.ofSeconds(1));
+    rpcServerBuilder.requestTopic(requestTopic);
+    rpcServer = rpcServerBuilder.build(pulsarClient, requestFunction, rollbackFunction);
+    Thread.sleep(3000);
+  }
 
-    @Test
-    public void testPulsarRpcServerWithPattern() throws Exception {
-        setupTopic("pattern");
-        final int defaultEpoch = 1;
-        AtomicInteger epoch = new AtomicInteger(defaultEpoch);
+  @Test
+  public void testPulsarRpcServerWithPattern() throws Exception {
+    setupTopic("pattern");
+    final int defaultEpoch = 1;
+    AtomicInteger epoch = new AtomicInteger(defaultEpoch);
 
-        // What do we do when we receive the request message
-        Function<TestRequest, CompletableFuture<TestReply>> requestFunction = request -> {
-            epoch.getAndIncrement();
-            return CompletableFuture.completedFuture(new TestReply(request.value() + "-----------done"));
+    // What do we do when we receive the request message
+    Function<TestRequest, CompletableFuture<TestReply>> requestFunction =
+        request -> {
+          epoch.getAndIncrement();
+          return CompletableFuture.completedFuture(
+              new TestReply(request.value() + "-----------done"));
         };
 
-        // If the server side is stateful, an error occurs after the server side executes 3-1, and a mechanism for
-        // checking and rolling back needs to be provided.
-        BiConsumer<String, TestRequest> rollbackFunction = (id, request) -> {
-            if (epoch.get() != defaultEpoch) {
-                epoch.set(defaultEpoch);
-            }
+    // If the server side is stateful, an error occurs after the server side executes 3-1, and a
+    // mechanism for
+    // checking and rolling back needs to be provided.
+    BiConsumer<String, TestRequest> rollbackFunction =
+        (id, request) -> {
+          if (epoch.get() != defaultEpoch) {
+            epoch.set(defaultEpoch);
+          }
         };
 
-        PulsarRpcServerBuilder<TestRequest, TestReply> rpcServerBuilder =
-                PulsarRpcServer.builder(requestSchema, replySchema)
-                        .requestSubscription(requestSubBase)
-                        .patternAutoDiscoveryInterval(Duration.ofSeconds(1));
-        rpcServerBuilder.requestTopicsPattern(requestTopicPattern);
-        rpcServer = rpcServerBuilder.build(pulsarClient, requestFunction, rollbackFunction);
-        Thread.sleep(3000);
-    }
+    PulsarRpcServerBuilder<TestRequest, TestReply> rpcServerBuilder =
+        PulsarRpcServer.builder(requestSchema, replySchema)
+            .requestSubscription(requestSubBase)
+            .patternAutoDiscoveryInterval(Duration.ofSeconds(1));
+    rpcServerBuilder.requestTopicsPattern(requestTopicPattern);
+    rpcServer = rpcServerBuilder.build(pulsarClient, requestFunction, rollbackFunction);
+    Thread.sleep(3000);
+  }
 }
