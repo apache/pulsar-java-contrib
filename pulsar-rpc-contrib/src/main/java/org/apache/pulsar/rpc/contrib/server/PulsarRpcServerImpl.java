@@ -14,7 +14,6 @@
 package org.apache.pulsar.rpc.contrib.server;
 
 import static lombok.AccessLevel.PACKAGE;
-
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;

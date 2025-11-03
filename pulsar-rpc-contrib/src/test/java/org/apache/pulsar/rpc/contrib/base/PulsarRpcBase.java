@@ -14,7 +14,6 @@
 package org.apache.pulsar.rpc.contrib.base;
 
 import static java.util.UUID.randomUUID;
-
 import java.time.Duration;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;

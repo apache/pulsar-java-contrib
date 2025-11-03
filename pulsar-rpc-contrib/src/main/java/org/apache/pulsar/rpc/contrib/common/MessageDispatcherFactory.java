@@ -14,7 +14,6 @@
 package org.apache.pulsar.rpc.contrib.common;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
