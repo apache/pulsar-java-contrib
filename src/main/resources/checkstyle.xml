@@ -122,7 +122,6 @@ page at http://checkstyle.sourceforge.net/config.html -->
             <property name="option" value="top"/>
             <property name="sortStaticImportsAlphabetically" value="true"/>
             <property name="tokens" value="STATIC_IMPORT, IMPORT"/>
-            <property name="separated" value="true"/>
             <message key="import.ordering"
                      value="Import {0} appears after other imports that it should precede"/>
         </module>

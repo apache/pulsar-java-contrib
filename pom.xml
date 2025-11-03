@@ -140,6 +140,12 @@
                             <version>${google-java-format.version}</version>
                             <style>GOOGLE</style>
                         </googleJavaFormat>
+                        <!-- \# refers to the static imports -->
+                        <replaceRegex>
+                            <name>no-blank-between-static-and-normal-imports</name>
+                            <searchRegex>(?m)(^import static[^\n]*;\n(?:import static[^\n]*;\n)*)(?:\s*\n)(?=import )</searchRegex>
+                            <replacement>$1</replacement>
+                        </replaceRegex>
                     </java>
                     <pom>
                         <includes>
