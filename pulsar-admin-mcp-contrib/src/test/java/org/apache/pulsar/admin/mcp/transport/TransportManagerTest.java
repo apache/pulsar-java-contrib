@@ -20,6 +20,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+
 import org.apache.pulsar.admin.mcp.config.PulsarMCPCliOptions;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;

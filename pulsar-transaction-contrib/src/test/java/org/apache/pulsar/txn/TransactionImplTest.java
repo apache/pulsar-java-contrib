@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -87,7 +88,8 @@ public class TransactionImplTest {
     CompletableFuture<Void> future = transactionImpl.ackAllReceivedMsgsAsync();
     future.get();
 
-    // Verify each consumer called the correct acknowledgeAsync method with the correct message IDs
+    // Verify each consumer called the correct acknowledgeAsync method with the correct message
+    // IDs
     for (int i = 0; i < mockConsumers.size(); i++) {
       Consumer<?> consumer = mockConsumers.get(i);
       MessageId messageId = messageIds.get(i);
@@ -109,7 +111,8 @@ public class TransactionImplTest {
     // Call the ackAllReceivedMsgs method
     transactionImpl.ackAllReceivedMsgs(consumer);
 
-    // Verify the consumer called the correct acknowledgeAsync method with the correct message IDs
+    // Verify the consumer called the correct acknowledgeAsync method with the correct message
+    // IDs
     verify(consumer).acknowledgeAsync(eq(List.of(messageId)), eq(mockTransaction));
     // Verify the message Ids were removed from the transaction context after acked.
     assertEquals(transactionImpl.getReceivedMessages().size(), 0);
@@ -133,7 +136,8 @@ public class TransactionImplTest {
     // Call the ackAllReceivedMsgs method
     transactionImpl.ackAllReceivedMsgs();
 
-    // Verify each consumer called the correct acknowledgeAsync method with the correct message IDs
+    // Verify each consumer called the correct acknowledgeAsync method with the correct message
+    // IDs
     for (int i = 0; i < mockConsumers.size(); i++) {
       Consumer<?> consumer = mockConsumers.get(i);
       MessageId messageId = messageIds.get(i);
@@ -160,7 +164,8 @@ public class TransactionImplTest {
     CompletableFuture<Void> future = transactionImpl.ackAllReceivedMsgsAsync();
     future.get();
 
-    // Verify each consumer called the correct acknowledgeAsync method with the correct message IDs
+    // Verify each consumer called the correct acknowledgeAsync method with the correct message
+    // IDs
     for (int i = 0; i < mockConsumers.size(); i++) {
       Consumer<?> consumer = mockConsumers.get(i);
       MessageId messageId = messageIds.get(i);
