@@ -47,7 +47,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <pulsar.version>4.0.5</pulsar.version>
+        <default.pulsar.version>4.0.5</default.pulsar.version>
         <maven-checkstyle-plugin.version>3.4.0</maven-checkstyle-plugin.version>
         <puppycrawl.checkstyle.version>8.45.1</puppycrawl.checkstyle.version>
         <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
@@ -70,13 +70,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-bom</artifactId>
                 <version>${slf4j.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.pulsar</groupId>
-                <artifactId>pulsar-bom</artifactId>
-                <version>${pulsar.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

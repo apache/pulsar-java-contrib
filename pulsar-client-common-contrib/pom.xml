@@ -29,6 +29,7 @@
         <dependency>
             <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-client-all</artifactId>
+            <version>${default.pulsar.version}</version>
         </dependency>
     </dependencies>
     <inceptionYear>2024</inceptionYear>
