@@ -11,14 +11,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import lombok.extern.slf4j.Slf4j;
-import org.testng.annotations.Test;
+package org.apache.pulsar.client.common;
 
-@Slf4j
-public class DemoTest {
+import java.time.Duration;
 
-  @Test
-  public void testDemo() {
-    log.info("=== Test started ===");
-  }
+public class Constants {
+    public static final int PARTITION_NONE_INDEX = -1;
+    public static final Duration DEFAULT_OPERATION_TIMEOUT = Duration.ofSeconds(30);
+    public static final String PARTITIONED_TOPIC_SUFFIX = "-partitioned-";
 }
