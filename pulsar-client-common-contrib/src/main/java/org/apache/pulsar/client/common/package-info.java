@@ -11,14 +11,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import lombok.extern.slf4j.Slf4j;
-import org.testng.annotations.Test;
-
-@Slf4j
-public class DemoTest {
-
-  @Test
-  public void testDemo() {
-    log.info("=== Test started ===");
-  }
-}
+package org.apache.pulsar.client.common;
