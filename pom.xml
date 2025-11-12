@@ -47,7 +47,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <pulsar.version>4.0.5</pulsar.version>
+        <pulsar.version>4.1.1</pulsar.version>
         <maven-checkstyle-plugin.version>3.4.0</maven-checkstyle-plugin.version>
         <puppycrawl.checkstyle.version>8.45.1</puppycrawl.checkstyle.version>
         <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
