@@ -1,8 +1,0 @@
-org/apache/pulsar/metadata/impl/EtcdMetadataStore$1.class
-org/apache/pulsar/metadata/impl/EtcdSessionWatcher.class
-org/apache/pulsar/metadata/impl/EtcdConfig.class
-org/apache/pulsar/metadata/impl/EtcdMetadataStoreProvider.class
-org/apache/pulsar/metadata/impl/EtcdMetadataStore.class
-org/apache/pulsar/metadata/impl/EtcdSessionWatcher$1.class
-org/apache/pulsar/metadata/impl/EtcdConfig$EtcdConfigBuilder.class
-org/apache/pulsar/metadata/impl/EtcdMetadataStore$2.class
