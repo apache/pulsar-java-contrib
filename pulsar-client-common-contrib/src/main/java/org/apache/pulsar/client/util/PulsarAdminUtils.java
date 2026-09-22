@@ -21,8 +21,12 @@ import org.apache.pulsar.client.api.MessageIdAdv;
 import org.apache.pulsar.client.common.ConsumeStats;
 import org.apache.pulsar.client.impl.MessageIdImpl;
 import org.apache.pulsar.common.policies.data.PersistentTopicInternalStats;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PulsarAdminUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(PulsarAdminUtils.class);
 
   public static long searchOffset(
       String partitionTopic, long timestamp, String brokerCluster, PulsarAdmin pulsarAdmin)
@@ -62,6 +66,16 @@ public class PulsarAdminUtils {
       consumedMessageId = minMessageId;
     }
 
+    // Ensure consumedMessageId is not greater than maxMessageId (lastConfirmedEntry).
+    // When a consumer has acked all messages, the markDeletePosition may advance to the
+    // beginning of a newly rolled-over ledger that has no confirmed entries yet. Reading
+    // such a position would trigger a server-side "LastConfirmedEntry x:y when reading
+    // ledger z" error, so we clamp it to the last confirmed entry, which semantically
+    // means "all messages have been consumed".
+    if (consumedMessageId.compareTo(maxMessageId) > 0) {
+      consumedMessageId = maxMessageId;
+    }
+
     consumeStats.setLastConsumedOffset(
         extractMessageIndex(partitionTopic, consumedMessageId, brokerCluster, pulsarAdmin));
     consumeStats.setMaxOffset(
@@ -81,13 +95,14 @@ public class PulsarAdminUtils {
     long ledgerId = messageId.getLedgerId();
     long entryId = messageId.getEntryId();
     if (ledgerId > 0 && entryId < 0) {
-      entryId = 0;
-      return getMessageIndex(
+      long index =
+          getMessageIndex(
               topic,
-              new MessageIdImpl(ledgerId, entryId, messageId.getPartitionIndex()),
+              new MessageIdImpl(ledgerId, 0, messageId.getPartitionIndex()),
               brokerCluster,
-              pulsarAdmin)
-          - 1;
+              pulsarAdmin);
+      // Keep the "no readable message" sentinel (-1) intact instead of turning it into -2.
+      return index < 0 ? index : index - 1L;
     } else {
       return getMessageIndex(topic, messageId, brokerCluster, pulsarAdmin);
     }
@@ -96,11 +111,32 @@ public class PulsarAdminUtils {
   private static long getMessageIndex(
       String topic, MessageIdAdv messageId, String brokerCluster, PulsarAdmin pulsarAdmin)
       throws PulsarAdminException {
-    Message<byte[]> message =
-        pulsarAdmin.topics().getMessageById(topic, messageId.getLedgerId(), messageId.getEntryId());
+    Message<byte[]> message;
+    try {
+      message =
+          pulsarAdmin
+              .topics()
+              .getMessageById(topic, messageId.getLedgerId(), messageId.getEntryId());
+    } catch (PulsarAdminException.NotFoundException
+        | PulsarAdminException.ServerSideErrorException e) {
+      // Either the message/position does not exist (NotFoundException) or it points to a
+      // ledger/entry that has no confirmed data yet (ServerSideErrorException, e.g.
+      // "LastConfirmedEntry is x:y when reading ledger z"). Both are expected boundary
+      // cases rather than real failures, so we degrade gracefully by returning -1
+      // (no valid index) instead of breaking the whole consume-stats computation.
+      log.warn(
+          "No readable message at {} in topic {}, treat as no valid index. reason: {}",
+          messageId,
+          topic,
+          e.getMessage());
+      return -1L;
+    }
 
     if (message == null) {
-      throw new PulsarAdminException("No messages found for " + messageId + " in topic " + topic);
+      // No readable message at this position, keep consistent with the ServerSideError
+      // handling above and degrade gracefully by returning -1 (no valid index).
+      log.warn("No message found for {} in topic {}, treat as no valid index.", messageId, topic);
+      return -1L;
     }
 
     Optional<Long> indexOptional = message.getIndex();
@@ -110,8 +146,11 @@ public class PulsarAdminUtils {
           .putMessageIdByOffset(topic, index, messageId);
       return index;
     } else {
-      throw new PulsarAdminException(
-          "Message index not found for " + messageId + " in topic " + topic);
+      // The message carries no index (e.g. produced by an old client without brokerEntryMetadata).
+      // Degrade gracefully by returning -1 to stay consistent with the other branches.
+      log.warn(
+          "Message index not found for {} in topic {}, treat as no valid index.", messageId, topic);
+      return -1L;
     }
   }
 
