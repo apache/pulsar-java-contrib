@@ -106,7 +106,7 @@ public class PulsarPullConsumerTest {
             brokerCluster,
             Schema.BYTES,
             () -> pulsarClient,
-            pulsarAdmin,
+            () -> pulsarAdmin,
             null);
     pullConsumer.start();
 
@@ -177,7 +177,7 @@ public class PulsarPullConsumerTest {
             brokerCluster,
             Schema.BYTES,
             () -> pulsarClient,
-            pulsarAdmin,
+            () -> pulsarAdmin,
             null);
     pullConsumer.start();
 
@@ -218,7 +218,7 @@ public class PulsarPullConsumerTest {
               brokerCluster,
               Schema.BYTES,
               () -> pulsarClient,
-              pulsarAdmin,
+              () -> pulsarAdmin,
               null);
       pullConsumer.start();
 

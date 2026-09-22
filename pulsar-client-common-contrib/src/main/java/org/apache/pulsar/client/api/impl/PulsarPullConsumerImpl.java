@@ -62,7 +62,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
   private final Map<String, Consumer<T>> consumerMap;
   private final OffsetToMessageIdCache offsetToMessageIdCache;
   private final ReaderCache<T> readerCache;
-  private final PulsarAdmin pulsarAdmin;
+  private final Supplier<PulsarAdmin> pulsarAdminSupplier;
   private final Supplier<PulsarClient> pulsarClientSupplier;
   private final ConsumerBuilder<T> consumerBuilder;
 
@@ -74,7 +74,7 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
       String brokerCluster,
       Schema<T> schema,
       Supplier<PulsarClient> clientSupplier,
-      PulsarAdmin admin,
+      Supplier<PulsarAdmin> adminSupplier,
       ConsumerBuilder<T> consumerBuilder) {
     this.topic = Objects.requireNonNull(topic, "Topic must not be null");
     this.subscription = Objects.requireNonNull(subscription, "Subscription must not be null");
@@ -82,10 +82,11 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
     this.schema = Objects.requireNonNull(schema, "Schema must not be null");
     this.pulsarClientSupplier =
         Objects.requireNonNull(clientSupplier, "PulsarClient must not be null");
-    this.pulsarAdmin = Objects.requireNonNull(admin, "PulsarAdmin must not be null");
+    this.pulsarAdminSupplier =
+        Objects.requireNonNull(adminSupplier, "PulsarAdmin must not be null");
     this.consumerMap = new ConcurrentHashMap<>();
     this.offsetToMessageIdCache =
-        OffsetToMessageIdCacheProvider.getOrCreateCache(admin, brokerCluster);
+        OffsetToMessageIdCacheProvider.getOrCreateCache(getPulsarAdmin(), brokerCluster);
     this.readerCache =
         ReaderCacheProvider.getOrCreateReaderCache(
             this.subscription, brokerCluster, schema, clientSupplier.get(), offsetToMessageIdCache);
@@ -105,7 +106,8 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
   }
 
   private void initializePartitions() throws PulsarAdminException, PulsarClientException {
-    PartitionedTopicMetadata metadata = pulsarAdmin.topics().getPartitionedTopicMetadata(topic);
+    PartitionedTopicMetadata metadata =
+        getPulsarAdmin().topics().getPartitionedTopicMetadata(topic);
     this.partitionCount = metadata.partitions;
 
     if (partitionCount == 0) {
@@ -130,6 +132,12 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
     return Objects.requireNonNull(
         pulsarClientSupplier.get(),
         "PulsarClient supplier returned null. Ensure PulsarClient is properly initialized.");
+  }
+
+  private PulsarAdmin getPulsarAdmin() {
+    return Objects.requireNonNull(
+        pulsarAdminSupplier.get(),
+        "PulsarAdmin supplier returned null. Ensure PulsarAdmin is properly initialized.");
   }
 
   @Override
@@ -231,14 +239,15 @@ public class PulsarPullConsumerImpl<T> implements PulsarPullConsumer<T> {
   @Override
   public long searchOffset(int partition, long timestamp) throws PulsarAdminException {
     String partitionTopic = buildPartitionTopic(topic, partition);
-    return PulsarAdminUtils.searchOffset(partitionTopic, timestamp, brokerCluster, pulsarAdmin);
+    return PulsarAdminUtils.searchOffset(
+        partitionTopic, timestamp, brokerCluster, getPulsarAdmin());
   }
 
   @Override
   public ConsumeStats getConsumeStats(int partition) throws PulsarAdminException {
     String partitionTopic = buildPartitionTopic(topic, partition);
     return PulsarAdminUtils.getConsumeStats(
-        partitionTopic, partition, subscription, brokerCluster, pulsarAdmin);
+        partitionTopic, partition, subscription, brokerCluster, getPulsarAdmin());
   }
 
   @Override
